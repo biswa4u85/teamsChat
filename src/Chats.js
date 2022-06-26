@@ -526,7 +526,7 @@ function Chats() {
               <form onSubmit={handleSubmit} style={{ width: '100%' }}>
                 <div className="col-12">
                   <div className="chat-box-tray autocomplete">
-                    <input type="checkbox" name="liveCheck" checked={live} value="live" onClick={updateLive} />
+                    <input type="checkbox" name="liveCheck" checked={live} value="live" onChange={updateLive} />
                     <Emoji enableTxt={addEmoji} />
                     <input ref={messageRef} type="text" placeholder="Type your message here..." value={newMessage} onChange={(event) => addMessage(event.target.value)} />
                     <label className="upload-file">
