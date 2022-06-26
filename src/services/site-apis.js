@@ -31,24 +31,27 @@ export function apiPostCall(path, params) {
     });
 }
 
-export function uploadImgApi(file, token) {
-  const data = new FormData();
-  data.append('files', file);
-  return fetch(`${Config.apiBaseUrl}/file/upload`, {
-    method: 'POST',
-    headers: {
-      Accept: 'application/json',
-      authorization: token,
-    },
-    body: data,
-  })
-    .then(response => response.json())
-    .then(responseJson => {
-      if (responseJson) {
-        return `${responseJson.data[0].url}`
+export function fileUpload(file) {
+  let formData = new FormData();
+  formData.append('file', file);
+  formData.append('is_private', '0');
+  formData.append('folder', 'Home/Attachments');
+  formData.append('doctype', 'Web Page');
+  return axiosAPI.post('/api/method/upload_file', formData)
+    .then((response) => {
+      return response.data
+    })
+    .catch((error) => {
+      let errors = null
+      if (error.response) {
+        errors = error.response
+      } else if (error.request) {
+        errors = error.request
+      } else {
+        errors = error.message
       }
-      return null
-    }).catch(error => {
-      return error;
+      toast.error(errors.statusText);
     });
+
+
 }

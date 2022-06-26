@@ -1,7 +1,8 @@
 import React, { useRef, useState, useEffect } from "react";
 import $ from 'jquery';
+import Config from "./Config";
 import { parse_msgs, time_ago } from './Utils'
-import { apiPostCall } from './services/site-apis'
+import { apiPostCall, fileUpload } from './services/site-apis'
 import Emoji from './Emoji'
 
 const recentTabOptions = [
@@ -44,8 +45,8 @@ function Chats() {
     window?.frappe?.socketio.socket.on("send_message", recvMessage);
     window?.frappe?.socketio.socket.on("send_chat", recvChat);
     setInterval(() => {
-      getChats(5)
-      updateTime(5)
+      // getChats(5)
+      // updateTime(5)
     }, 1000)
   }, []);
 
@@ -284,7 +285,7 @@ function Chats() {
     setSelChats(data)
     setMessages(data.messages)
     setNewMessage('')
-    chatMenuRef.current.scrollIntoView({ behavior: "smooth" });
+    setTimeout(() => chatMenuRef.current.scrollIntoView({ behavior: "smooth" }), 100)
   }
 
   const addEmoji = (data) => {
@@ -323,14 +324,23 @@ function Chats() {
     }
   }
 
-  const uploadFile = (elem) => {
-    // var filename = $(elem).val();
-    console.log(elem.fi)
+  const uploadFile = async (event) => {
+    if (selChats) {
+      let data = await fileUpload(event.target.files[0])
+      if (data.message) {
+        let file = `${Config.apiURL}${data.message.file_url}`
+        let params = `telegram_id=${selChats.telegram_id}&brand=${selChats.brand}&message=%3Cb%3E${window?.frappe?.full_name}%3C%2Fb%3E%3A%0AIMG:${file}%0A&cmd=mahadev.mahadev.func.send_message`;
+        let data1 = await apiPostCall('/', params)
+        if (data1) {
+          setNewMessage('')
+        }
+      }
+    }
   }
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (newMessage) {
+    if (selChats && newMessage) {
       let params = `telegram_id=${selChats.telegram_id}&brand=${selChats.brand}&message=%3Cb%3E${window?.frappe?.full_name}%3C%2Fb%3E%3A%0A${newMessage}%0A&cmd=mahadev.mahadev.func.send_message`;
       let data = await apiPostCall('/', params)
       if (data) {
@@ -478,11 +488,12 @@ function Chats() {
               let timestamp = parseInt(chats.last_msg.timestamp) * 1000 || 0;
               let _tab_msg = `${parseInt(chats.last_msg.sender) ? 'Bot' : 'User'}: ${chats.last_msg.content || 'New Chat'}`;
               let _tab_time = timestamp ? time_ago(timestamp) : '';
+              let isImg = _tab_msg.split(':\nIMG:')
               return <div key={key} id={chats.name} className={"friend-drawer friend-drawer--onhover "} onClick={() => selectChat(chats)}>
                 <img className="profile-image" src={`https://ui-avatars.com/api/?name=${chats.first_name + ' ' + chats.last_name}`} alt="" />
                 <div className="text">
                   <h6>{_live} {_tab_identifier}</h6>
-                  <p className="text-muted" dangerouslySetInnerHTML={{ __html: _tab_msg }} />
+                  {isImg[1] ? <><div style={{ display: 'inline' }} dangerouslySetInnerHTML={{ __html: isImg[0] }} /> <img width={15} src={isImg[1]} alt="" /></> : <div dangerouslySetInnerHTML={{ __html: _tab_msg }} />}
                 </div>
                 <div className="message-count"> {chats.messages?.length} </div>
                 <span className="time text-muted small message-time tab-time text-overflow" timestamp={timestamp} title={_tab_time}>{_tab_time}</span>
@@ -510,10 +521,11 @@ function Chats() {
                 let color = state.includes('_success') ? '#16c78452' : state.includes('_failed') ? '#d0353e52' : 'white';
                 let conversation_id = item.name
                 let date_str = new Date(item.timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
+                let isImg = item.content.split(':\nIMG:')
                 return <div key={key} className={"row no-gutters" + conversation_id} style={{ backgroundColor: color }}>
                   <div className={parseInt(item.sender) ? 'col-md-7 offset-md-5' : 'col-md-7 '}>
                     <div className={parseInt(item.sender) ? 'chat-bubble chat-bubble--right' : 'chat-bubble chat-bubble--left'}>
-                      <div dangerouslySetInnerHTML={{ __html: item.content }} />
+                      {isImg[1] ? <><div style={{ display: 'inline' }} dangerouslySetInnerHTML={{ __html: isImg[0] }} /> <img width={40} src={isImg[1]} alt="" /></> : <div dangerouslySetInnerHTML={{ __html: item.content }} />}
                       <h5><i className="fa fa-clock-o"></i> {date_str} </h5>
                     </div>
                   </div>
