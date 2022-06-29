@@ -103,7 +103,7 @@ function Chats() {
       let sortCurrentChats = Object.entries(JSON.parse(JSON.stringify(currentChats)))
         .sort(([, a], [, b]) => new Date(b.last_seen) - new Date(a.last_seen))
         .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
-console.log(sortCurrentChats)
+
       setCurrentChats(sortCurrentChats)
       randerBrandWiseChats([], false)
       if (data.live === 1) {
