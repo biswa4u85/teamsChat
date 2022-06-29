@@ -21,6 +21,7 @@ const stateTabOptions = [
 ]
 
 function Chats() {
+  const tempMessagesIds = useRef({});
   const chatMenuRef = useRef();
   const messageRef = useRef();
   let brandWiseChats = useRef({});
@@ -28,13 +29,17 @@ function Chats() {
   const [brands, setBrands] = useState({})
   const [currentChats, setCurrentChats] = useState({})
   let recent = useRef(recentTabOptions[1]);
+  const [recentVal, setRecentVal] = useState(recentTabOptions[1])
   let state = useRef(stateTabOptions[0]);
+  const [stateVal, setStateVal] = useState(stateTabOptions[1])
   let selChatType = useRef('live');
   const [templates, setTemplates] = useState([])
   let timer = useRef(null);
   const [selTemplate, setSelTemplate] = useState([])
   const [search, setSearch] = useState('')
+  let selChatsLive = useRef({});
   const [selChats, setSelChats] = useState(null)
+  let messagesLive = useRef({});
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
   const [live, setLive] = useState(false)
@@ -45,42 +50,88 @@ function Chats() {
     window?.frappe?.socketio.socket.on("send_message", recvMessage);
     window?.frappe?.socketio.socket.on("send_chat", recvChat);
     setInterval(() => {
-      // getChats(5)
-      // updateTime(5)
+      updateTime(5)
     }, 1000)
   }, []);
 
 
-  const getChats = async (qty) => {
+  const getChats = async (mobileNumber) => {
     let params = `cmd=mahadev.mahadev.doctype.conversation_log.conversation_log.get_conversationsnew`;
-    if (qty) {
-      params = `interval=5&cmd=mahadev.mahadev.doctype.conversation_log.conversation_log.get_conversationsnew`;
+    if (mobileNumber) {
+      params = `mobile_number=${mobileNumber}&cmd=mahadev.mahadev.doctype.conversation_log.conversation_log.get_conversationsnew`;
     }
-    let data = await apiPostCall('/', params)
+    let data = await apiPostCall('/', params, window?.frappe?.csrf_token)
     if (data.message) {
-      randerBrandWiseChats(data.message, (qty ? false : true))
+      randerBrandWiseChats(data.message, (mobileNumber ? false : true))
     }
   }
 
   const loadPrevConversation = async () => {
     if (selChats) {
       let params = `doctype=Conversation+Log&name=${selChats.previous_conversation}&cmd=frappe.client.get`;
-      let data = await apiPostCall('/', params)
+      let data = await apiPostCall('/', params, window?.frappe?.csrf_token)
       if (data.message) {
         data.message.messages = parse_msgs(data.message.messages);
         let tempMessages = JSON.parse(JSON.stringify(messages))
         let newMessages = [...data.message.messages, ...tempMessages]
+        messagesLive.current = newMessages
         setMessages(newMessages)
       }
     }
   }
 
-  const recvMessage = (data) => {
-    console.log('aa ', data)
+  const recvMessage = (msg) => {
+    let data = JSON.parse(msg);
+    data.content = data.content ? decodeURIComponent(data.content) : data.content;
+
+    let currentChats = {}
+    if (selBrand.current) {
+      currentChats = JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current]))
+    }
+
+    // Update Main Chat
+    if (data.mobile_number && currentChats[data.mobile_number]) {
+      let oldData = JSON.parse(JSON.stringify(currentChats[data.mobile_number]))
+      oldData.messages.push(data);
+      oldData.last_seen = data.timestamp;
+      oldData.live = data.live
+      oldData.state = data.state;
+      oldData.last_msg = data;
+      currentChats[data.mobile_number] = oldData
+      brandWiseChats.current = { ...brandWiseChats.current, [selBrand.current]: currentChats }
+
+      let sortCurrentChats = Object.entries(JSON.parse(JSON.stringify(currentChats)))
+        .sort(([, a], [, b]) => new Date(b.last_seen) - new Date(a.last_seen))
+        .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
+console.log(sortCurrentChats)
+      setCurrentChats(sortCurrentChats)
+      randerBrandWiseChats([], false)
+      if (data.live === 1) {
+        playSound(selBrand.current, data.content)
+        playSound(selBrand.current, data.content)
+      }
+    }
+
+    // check New User
+    if (data.mobile_number in tempMessagesIds.current === false) {
+      tempMessagesIds.current[data.mobile_number] = true
+      getChats(data.mobile_number)
+    }
+
+    // Update Chat
+    if (selChatsLive.current && selChatsLive.current.name == data.mobile_number) {
+      let newMessage = [...messagesLive.current, data]
+      messagesLive.current = newMessage
+      setMessages([])
+      setTimeout(() => chatMenuRef.current.scrollIntoView({ behavior: "smooth" }), 100)
+    }
+
   }
 
-  const recvChat = (data) => {
-    console.log('bb ', data)
+  const recvChat = (msg) => {
+    let data = JSON.parse(msg);
+    randerBrandWiseChats([data], false)
+    // console.log('bb ', data)
   }
 
   const randerBrandWiseChats = (data, brand = null) => {
@@ -88,6 +139,7 @@ function Chats() {
 
     // Make last msg
     for (let item of data) {
+      tempMessagesIds.current[item.name] = item.brand
       item.messages = parse_msgs(item.messages);
       let last_msg = {};
       if (item.messages) last_msg = item.messages[item.messages.length - 1];
@@ -96,9 +148,9 @@ function Chats() {
     }
 
     // Sort Array First
-    data = data.sort(function (a, b) {
-      return new Date(b.last_seen) - new Date(a.last_seen);
-    });
+    // data = data.sort(function (a, b) {
+    //   return new Date(b.last_seen) - new Date(a.last_seen);
+    // });
 
     // Group By Brand
     for (let item of data) {
@@ -147,14 +199,18 @@ function Chats() {
 
   const selectBrand = (data) => {
     selBrand.current = data
-    filterChats()
+    let currentChats = JSON.parse(JSON.stringify(brandWiseChats.current[data]))
+    setCurrentChats(currentChats)
     setSelTemplate([])
     getTemplate(data)
+    messagesLive.current = []
+    setMessages([])
+    filterChats()
   }
 
   const getTemplate = async (name) => {
     let params = `doctype=Chat+Template&filters=%7B%22brand%22%3A%22${name}%22%7D&limit_page_length=None&fields=%5B%22name%22%2C%22brand%22%2C%22template_message%22%5D&cmd=frappe.client.get_list`;
-    let data = await apiPostCall('/', params)
+    let data = await apiPostCall('/', params, window?.frappe?.csrf_token)
     if (data.message) {
       setTemplates(data.message)
     }
@@ -162,118 +218,119 @@ function Chats() {
 
   const filterChats = (search = null) => {
 
-    let currentChats = {}
-    if (selBrand.current) {
-      currentChats = brandWiseChats.current[selBrand.current]
-    }
+    setTimeout(() => {
 
-    let live_chats = [];
-    let not_live_chats = [];
-    let success_chats = [];
-    let process_chats = [];
-    let failed_chats = [];
+      let currentChats = {}
+      if (selBrand.current) {
+        currentChats = JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current]))
+      }
 
-    let recent_1_chats = [];
-    let recent_7_chats = [];
-    let recent_30_chats = [];
-    let recent_365_chats = [];
+      let live_chats = [];
+      let not_live_chats = [];
+      let success_chats = [];
+      let process_chats = [];
+      let failed_chats = [];
 
-    let account_chats = [];
-    let deposit_chats = [];
-    let withdraw_chats = [];
-    let blocked_chats = [];
+      let recent_1_chats = [];
+      let recent_7_chats = [];
+      let recent_30_chats = [];
+      let recent_365_chats = [];
 
-    for (let c in currentChats) {
-      // Live Filter
-      if (currentChats[c].live)
-        live_chats.push(c);
-      else
-        not_live_chats.push(c);
+      let account_chats = [];
+      let deposit_chats = [];
+      let withdraw_chats = [];
+      let blocked_chats = [];
 
-      // Recent Filter
-      let msg_date = +new Date(parseInt(currentChats[c].last_seen) * 1000);
-      let recent_date = +new Date() - (1 * 3600 * 24 * 1000);
-      if (msg_date > recent_date)
-        recent_1_chats.push(c);
-      recent_date = +new Date() - (7 * 3600 * 24 * 1000);
-      if (msg_date > recent_date)
-        recent_7_chats.push(c);
-      recent_date = +new Date() - (30 * 3600 * 24 * 1000);
-      if (msg_date > recent_date)
-        recent_30_chats.push(c);
-      recent_date = +new Date() - (365 * 3600 * 24 * 1000);
-      if (msg_date > recent_date)
-        recent_365_chats.push(c);
+      for (let c in currentChats) {
+        // Live Filter
+        if (currentChats[c].live)
+          live_chats.push(c);
+        else
+          not_live_chats.push(c);
+
+        // Recent Filter
+        let msg_date = +new Date(parseInt(currentChats[c].last_seen) * 1000);
+        let recent_date = +new Date() - (1 * 3600 * 24 * 1000);
+        if (msg_date > recent_date)
+          recent_1_chats.push(c);
+        recent_date = +new Date() - (7 * 3600 * 24 * 1000);
+        if (msg_date > recent_date)
+          recent_7_chats.push(c);
+        recent_date = +new Date() - (30 * 3600 * 24 * 1000);
+        if (msg_date > recent_date)
+          recent_30_chats.push(c);
+        recent_date = +new Date() - (365 * 3600 * 24 * 1000);
+        if (msg_date > recent_date)
+          recent_365_chats.push(c);
 
 
-      // State Filter
-      let state = currentChats[c].state || '';
-      if (state.includes('success'))
-        success_chats.push(c);
-      else if (state.includes('failed'))
-        failed_chats.push(c);
-      else if (['account', 'deposit', 'withdraw'].find(v => state.includes(v)))
-        process_chats.push(c);
+        // State Filter
+        let state = currentChats[c].state || '';
+        if (state.includes('success'))
+          success_chats.push(c);
+        else if (state.includes('failed'))
+          failed_chats.push(c);
+        else if (['account', 'deposit', 'withdraw'].find(v => state.includes(v)))
+          process_chats.push(c);
+        if (state.includes('account'))
+          account_chats.push(c);
+        else if (state.includes('deposit'))
+          deposit_chats.push(c);
+        else if (state.includes('withdraw'))
+          withdraw_chats.push(c);
+        else if (state.includes('blocked'))
+          blocked_chats.push(c);
+        $(`#${currentChats[c].name}`).removeClass("tab-hidden");
+      }
 
-      if (state.includes('account'))
-        account_chats.push(c);
-      else if (state.includes('deposit'))
-        deposit_chats.push(c);
-      else if (state.includes('withdraw'))
-        withdraw_chats.push(c);
-      else if (state.includes('blocked'))
-        blocked_chats.push(c);
 
-      $(`#${currentChats[c].name}`).removeClass("tab-hidden");
-    }
+      for (let c in currentChats) {
 
-    let filterChats = JSON.parse(JSON.stringify(currentChats))
+        // Live Filter
+        if (selChatType.current == 'live' && !live_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
+        else if (selChatType.current == 'notLive' && !not_live_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
+        else if (selChatType.current == 'success' && !success_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
+        else if (selChatType.current == 'process' && !process_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
+        else if (selChatType.current == 'fail' && !failed_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
 
-    for (let c in filterChats) {
+        // Recent Filter
+        if (recent.current.value == '1' && !recent_1_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
+        else if (recent.current.value == '7' && !recent_7_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
+        else if (recent.current.value == '30' && !recent_30_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
+        else if (recent.current.value == '365' && !recent_365_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
 
-      // Live Filter
-      if (selChatType.current == 'live' && !live_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
-      else if (selChatType.current == 'notLive' && !not_live_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
-      else if (selChatType.current == 'success' && !success_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
-      else if (selChatType.current == 'process' && !process_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
-      else if (selChatType.current == 'failed' && !failed_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
+        // State Filter  
+        if (state.current.value == 'account' && !account_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
+        else if (state.current.value == 'deposit' && !deposit_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
+        else if (state.current.value == 'withdraw' && !withdraw_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
+        else if (state.current.value == 'blocked' && !blocked_chats.includes(c))
+          $(`#${currentChats[c].name}`).addClass("tab-hidden");
+      }
 
-      // Recent Filter
-      if (recent.current.value == '1' && !recent_1_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
-      else if (recent.current.value == '7' && !recent_7_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
-      else if (recent.current.value == '30' && !recent_30_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
-      else if (recent.current.value == '365' && !recent_365_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
-
-      // State Filter  
-      if (state.current.value == 'account' && !account_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
-      else if (state.current.value == 'deposit' && !deposit_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
-      else if (state.current.value == 'withdraw' && !withdraw_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
-      else if (state.current.value == 'blocked' && !blocked_chats.includes(c))
-        $(`#${filterChats[c].name}`).addClass("tab-hidden");
-    }
-
-    // Search Value
-    if (search) {
-      for (let c in filterChats) {
-        let data_str = `${filterChats[c].first_name} ${filterChats[c].last_name} ${filterChats[c].telegram_username} ${filterChats[c].state} ${filterChats[c].current_conversation} ${filterChats[c].mobile_number}`.toLowerCase();
-        if (!data_str.includes((search).toLowerCase())) {
-          $(`#${filterChats[c].name}`).addClass("tab-hidden");
+      // Search Value
+      if (search) {
+        for (let c in currentChats) {
+          let data_str = `${currentChats[c].first_name} ${currentChats[c].last_name} ${currentChats[c].telegram_username} ${currentChats[c].state} ${currentChats[c].current_conversation} ${currentChats[c].mobile_number}`.toLowerCase();
+          if (!data_str.includes((search).toLowerCase())) {
+            $(`#${currentChats[c].name}`).addClass("tab-hidden");
+          }
         }
       }
-    }
-    setCurrentChats(filterChats)
+
+    }, 100)
+
   }
 
   const selectChat = (data) => {
@@ -283,6 +340,8 @@ function Chats() {
     $(`#${data.name}`).addClass("tab-focus");
     data['time_str'] = new Date(data.last_msg.timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
     setSelChats(data)
+    selChatsLive.current = data
+    messagesLive.current = data.messages
     setMessages(data.messages)
     setNewMessage('')
     setTimeout(() => chatMenuRef.current.scrollIntoView({ behavior: "smooth" }), 100)
@@ -326,11 +385,11 @@ function Chats() {
 
   const uploadFile = async (event) => {
     if (selChats) {
-      let data = await fileUpload(event.target.files[0])
+      let data = await fileUpload(event.target.files[0], window?.frappe?.csrf_token)
       if (data.message) {
         let file = `${Config.apiURL}${data.message.file_url}`
         let params = `telegram_id=${selChats.telegram_id}&brand=${selChats.brand}&message=%3Cb%3E${window?.frappe?.full_name}%3C%2Fb%3E%3A%0AIMG:${file}%0A&cmd=mahadev.mahadev.func.send_message`;
-        let data1 = await apiPostCall('/', params)
+        let data1 = await apiPostCall('/', params, window?.frappe?.csrf_token)
         if (data1) {
           setNewMessage('')
         }
@@ -342,7 +401,7 @@ function Chats() {
     event.preventDefault();
     if (selChats && newMessage) {
       let params = `telegram_id=${selChats.telegram_id}&brand=${selChats.brand}&message=%3Cb%3E${window?.frappe?.full_name}%3C%2Fb%3E%3A%0A${newMessage}%0A&cmd=mahadev.mahadev.func.send_message`;
-      let data = await apiPostCall('/', params)
+      let data = await apiPostCall('/', params, window?.frappe?.csrf_token)
       if (data) {
         setNewMessage('')
       }
@@ -366,7 +425,7 @@ function Chats() {
     setLive(!live)
     if (selChats) {
       let params = `doctype=Conversation+Log&name=${selChats.current_conversation}&fieldname=%7B%22live%22%3A${!live}%7D&cmd=frappe.client.set_value`;
-      let data = await apiPostCall('/', params)
+      let data = await apiPostCall('/', params, window?.frappe?.csrf_token)
       if (data.message) {
         // console.log(data.message)
       }
@@ -376,11 +435,17 @@ function Chats() {
   const playSound = (msgBrand, state) => {
     let url = '';
     if (msgBrand == 'JitoDaily') {
-      if (state == 'live_chat_start') url = 'https://teams.jitodaily.com/files/LiveChatForJD.mp3';
-      if (state == 'live_chat_message_state') url = 'https://teams.jitodaily.com/files/JdAlert.mp3';
+      if (state.includes('Live Chat started')) url = 'https://teams.jitodaily.com/files/LiveChatForJD.mp3';
+      // if (state == 'live_chat_message_state') url = 'https://teams.jitodaily.com/files/JdAlert.mp3';
     } else if (msgBrand == 'agbook') {
-      if (state == 'live_chat_start') url = 'https://teams.jitodaily.com/files/LiveChatForAG.mp3';
-      if (state == 'live_chat_message_state') url = 'https://teams.jitodaily.com/files/AgAlert.mp3';
+      if (state.includes('Live Chat started')) url = 'https://teams.jitodaily.com/files/LiveChatForAG.mp3';
+      // if (state == 'live_chat_message_state') url = 'https://teams.jitodaily.com/files/AgAlert.mp3';
+    } else if (msgBrand == 'LionBook') {
+      if (state.includes('Live Chat started')) url = 'https://teams.jitodaily.com/files/LiveChatForLB.mp3';
+      // if (state == 'live_chat_message_state') url = 'https://teams.jitodaily.com/files/AgAlert.mp3';
+    } else if (msgBrand == 'LotusExch') {
+      if (state.includes('Live Chat started')) url = 'https://teams.jitodaily.com/files/LiveChatForLE.mp3';
+      // if (state == 'live_chat_message_state') url = 'https://teams.jitodaily.com/files/AgAlert.mp3';
     }
     let a = new Audio(url);
     a.play();
@@ -408,10 +473,10 @@ function Chats() {
               <div className="btn-group">
                 <button className="btn btn-sm dropdown-toggle btn-primary" type="button"
                   data-toggle="dropdown" aria-expanded="false">
-                  {recent.current.label}
+                  {recentVal.label}
                 </button>
                 <div className="dropdown-menu">
-                  {recentTabOptions.map((item, key) => <div key={key} className='dropdown-item recentTab' onClick={() => { recent.current = item; filterChats() }}>{item.label}</div>)}
+                  {recentTabOptions.map((item, key) => <div key={key} className='dropdown-item recentTab' onClick={() => { recent.current = item; setRecentVal(item); filterChats() }}>{item.label}</div>)}
                 </div>
               </div>
 
@@ -419,10 +484,10 @@ function Chats() {
               <div className="btn-group">
                 <button className="btn btn-sm dropdown-toggle btn-success" type="button"
                   data-toggle="dropdown" aria-expanded="false">
-                  {state.current.label}
+                  {stateVal.label}
                 </button>
                 <div className="dropdown-menu">
-                  {stateTabOptions.map((item, key) => <div key={key} className='dropdown-item stateTab' onClick={() => { state.current = item; filterChats() }}>{item.label}</div>)}
+                  {stateTabOptions.map((item, key) => <div key={key} className='dropdown-item stateTab' onClick={() => { state.current = item; setStateVal(item); filterChats() }}>{item.label}</div>)}
                 </div>
               </div>
 
@@ -492,7 +557,7 @@ function Chats() {
               return <div key={key} id={chats.name} className={"friend-drawer friend-drawer--onhover "} onClick={() => selectChat(chats)}>
                 <img className="profile-image" src={`https://ui-avatars.com/api/?name=${chats.first_name + ' ' + chats.last_name}`} alt="" />
                 <div className="text">
-                  <h6>{_live} {_tab_identifier}</h6>
+                  <h6 dangerouslySetInnerHTML={{ __html: _live + ' ' + _tab_identifier }}></h6>
                   {isImg[1] ? <><div style={{ display: 'inline' }} dangerouslySetInnerHTML={{ __html: isImg[0] }} /> <img width={15} src={isImg[1]} alt="" /></> : <div dangerouslySetInnerHTML={{ __html: _tab_msg }} />}
                 </div>
                 <div className="message-count"> {chats.messages?.length} </div>
