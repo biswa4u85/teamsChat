@@ -1,3 +1,5 @@
+import $ from 'jquery';
+
 export function parse_msgs(msgs) {
     if (!msgs) return;
     let messages = msgs.split('\n');
@@ -71,4 +73,26 @@ export function time_ago(time) {
                 return Math.floor(seconds / format[2]) + ' ' + format[1] + ' ' + token;
         }
     return time;
+}
+
+export function moveObjectElement(currentKey, afterKey, obj) {
+    let result = {};
+    let val = obj[currentKey];
+    delete obj[currentKey];
+    let next = -1;
+    let i = 0;
+    if (typeof afterKey == 'undefined' || afterKey == null) afterKey = '';
+    $.each(obj, function (k, v) {
+        if ((afterKey == '' && i == 0) || next == 1) {
+            result[currentKey] = val;
+            next = 0;
+        }
+        if (k == afterKey) { next = 1; }
+        result[k] = v;
+        ++i;
+    });
+    if (next == 1) {
+        result[currentKey] = val;
+    }
+    if (next !== -1) return result; else return obj;
 }

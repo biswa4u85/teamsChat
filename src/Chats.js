@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import $ from 'jquery';
 import Config from "./Config";
-import { parse_msgs, time_ago } from './Utils'
+import { parse_msgs, time_ago, moveObjectElement } from './Utils'
 import { apiPostCall, fileUpload } from './services/site-apis'
 import Emoji from './Emoji'
 
@@ -48,9 +48,10 @@ function Chats() {
     getChats(null)
     window?.frappe?.socketio.init(9000);
     window?.frappe?.socketio.socket.on("send_message", recvMessage);
-    window?.frappe?.socketio.socket.on("send_chat", recvChat);
+    // window?.frappe?.socketio.socket.on("send_chat", recvChat);
     setInterval(() => {
       updateTime(5)
+      // recvMessage("{\"mobile_number\": \"MN-00039867\", \"brand\": \"LotusExch\", \"conversation\": \"CONV-1657102671442\", \"state\": \"deposit_website_state\", \"message_id\": \"181846\", \"sender\": \"1\", \"message_type\": \"0\", \"content\": \"Select%20a%20%F0%9F%86%94%20\", \"timestamp\": \"1657102674\\n\", \"live\": 0}")
     }, 1000)
   }, []);
 
@@ -84,48 +85,40 @@ function Chats() {
     let data = JSON.parse(msg);
     data.content = data.content ? decodeURIComponent(data.content) : data.content;
 
-    let currentChats = {}
-    if (selBrand.current) {
-      currentChats = JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current]))
-    }
-
-    // Update Main Chat
-    if (data.mobile_number && currentChats[data.mobile_number]) {
-      let oldData = JSON.parse(JSON.stringify(currentChats[data.mobile_number]))
-      oldData.messages.push(data);
-      oldData.last_seen = data.timestamp;
-      oldData.live = data.live
-      oldData.state = data.state;
-      oldData.last_msg = data;
-      currentChats[data.mobile_number] = oldData
-      brandWiseChats.current = { ...brandWiseChats.current, [selBrand.current]: currentChats }
-
-      let sortCurrentChats = Object.entries(JSON.parse(JSON.stringify(currentChats)))
-        .sort(([, a], [, b]) => new Date(b.last_seen) - new Date(a.last_seen))
-        .reduce((r, [k, v]) => ({ ...r, [k]: v }), {});
-
-      setCurrentChats(sortCurrentChats)
-      randerBrandWiseChats([], false)
-      if (data.live === 1) {
-        playSound(selBrand.current, data.content)
-        playSound(selBrand.current, data.content)
-      }
-    }
-
     // check New User
     if (data.mobile_number in tempMessagesIds.current === false) {
       tempMessagesIds.current[data.mobile_number] = true
       getChats(data.mobile_number)
     }
 
-    // Update Chat
+    // Update Chat Messages
     if (selChatsLive.current && selChatsLive.current.name == data.mobile_number) {
       let newMessage = [...messagesLive.current, data]
       messagesLive.current = newMessage
-      setMessages([])
+      setMessages(messagesLive.current)
       setTimeout(() => chatMenuRef.current.scrollIntoView({ behavior: "smooth" }), 100)
     }
 
+    // Update Chat Menu 
+    if (brandWiseChats.current[data.brand] && data.mobile_number) {
+      let newData = brandWiseChats.current[data.brand][data.mobile_number]
+      if (newData) {
+        newData.messages.push(data)
+        newData.last_seen = data.timestamp;
+        newData.live = data.live
+        newData.state = data.state;
+        newData.last_msg = data;
+        newData.liveStarted = (data.content).includes('Live Chat started') ? true : false
+        brandWiseChats.current[data.brand][data.mobile_number] = newData
+        let sortCurrentChats = moveObjectElement(data.mobile_number, '', JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current])));
+        setCurrentChats(sortCurrentChats)
+        if (newData.liveStarted) {
+          randerBrands(false, data.brand)
+          playSound(data.brand)
+          setTimeout(() => playSound(data.brand), 1000)
+        }
+      }
+    }
   }
 
   const recvChat = (msg) => {
@@ -148,9 +141,9 @@ function Chats() {
     }
 
     // Sort Array First
-    // data = data.sort(function (a, b) {
-    //   return new Date(b.last_seen) - new Date(a.last_seen);
-    // });
+    data = data.sort(function (a, b) {
+      return new Date(b.last_seen) - new Date(a.last_seen);
+    });
 
     // Group By Brand
     for (let item of data) {
@@ -162,6 +155,13 @@ function Chats() {
         }
       }
     }
+    brandWiseChats.current = tempOldData
+    randerBrands(brand, null)
+    filterChats()
+  }
+
+  const randerBrands = (brand = false, sort = null) => {
+    let tempOldData = JSON.parse(JSON.stringify(brandWiseChats.current))
     // Get All Counts
     let allBrands = {}
     for (let key in tempOldData) {
@@ -189,12 +189,14 @@ function Chats() {
       // Update Counts
       allBrands[key] = { all: Object.keys(newChats).length, fail: failed_chats.length, live: live_chats.length, process: process_chats.length }
     }
-    setBrands(allBrands)
-    brandWiseChats.current = tempOldData
+    let sortBrands = allBrands
+    if (sort) {
+      sortBrands = moveObjectElement(sort, '', allBrands);
+    }
+    setBrands(sortBrands)
     if (brand) {
       selectBrand(Object.keys(allBrands)[0])
     }
-    filterChats()
   }
 
   const selectBrand = (data) => {
@@ -432,20 +434,16 @@ function Chats() {
     }
   }
 
-  const playSound = (msgBrand, state) => {
+  const playSound = (msgBrand) => {
     let url = '';
     if (msgBrand == 'JitoDaily') {
-      if (state.includes('Live Chat started')) url = 'https://teams.jitodaily.com/files/LiveChatForJD.mp3';
-      // if (state == 'live_chat_message_state') url = 'https://teams.jitodaily.com/files/JdAlert.mp3';
+      url = 'https://teams.jitodaily.com/files/LiveChatForJD.mp3'
     } else if (msgBrand == 'agbook') {
-      if (state.includes('Live Chat started')) url = 'https://teams.jitodaily.com/files/LiveChatForAG.mp3';
-      // if (state == 'live_chat_message_state') url = 'https://teams.jitodaily.com/files/AgAlert.mp3';
+      url = 'https://teams.jitodaily.com/files/LiveChatForAG.mp3';
     } else if (msgBrand == 'LionBook') {
-      if (state.includes('Live Chat started')) url = 'https://teams.jitodaily.com/files/LiveChatForLB.mp3';
-      // if (state == 'live_chat_message_state') url = 'https://teams.jitodaily.com/files/AgAlert.mp3';
+      url = 'https://teams.jitodaily.com/files/LiveChatForLB.mp3';
     } else if (msgBrand == 'LotusExch') {
-      if (state.includes('Live Chat started')) url = 'https://teams.jitodaily.com/files/LiveChatForLE.mp3';
-      // if (state == 'live_chat_message_state') url = 'https://teams.jitodaily.com/files/AgAlert.mp3';
+      url = 'https://teams.jitodaily.com/files/LiveChatForLE.mp3';
     }
     let a = new Audio(url);
     a.play();
@@ -546,8 +544,8 @@ function Chats() {
 
           <div className="leftMenu">
             {Object.keys(currentChats).map((item, key) => {
-              let chats = currentChats[item]
-              let _live = parseInt(chats.last_msg.live) ? '<span style="color: red;">LIVE</span>' : '';
+              let chats = currentChats[item] ? currentChats[item] : {}
+              let _live = parseInt(chats.live) ? '<span style="color: red;">LIVE</span>' : '';
               let full_name = `${chats.first_name || ''} ${chats.last_name || ''}`.trim();
               let _tab_identifier = `${chats.mobile_number} ${chats.telegram_username ? '(@' + chats.telegram_username + ')' : ''} - ${full_name}`;
               let timestamp = parseInt(chats.last_msg.timestamp) * 1000 || 0;
