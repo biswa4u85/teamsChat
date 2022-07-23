@@ -57,10 +57,36 @@ body {
   border-radius: 40px;
 }
 
+.message-text {
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.closeChart {
+  float: right;
+  padding-top: 15px;
+}
+
+.closeChart i {
+  color: #fff;
+  cursor: pointer;
+}
+
 .settings-tray {
-  background: #eee;
+  background: #5c5c5c;
   padding: 10px 15px;
   border-radius: 7px;
+}
+
+.settings-tray .friend-drawer--grey {
+  background: #5c5c5c;
+  border-bottom: none;
+  color: #fff;
+}
+
+.settings-tray .friend-drawer--grey .text-muted {
+  color: #fff !important;
 }
 
 .settings-tray .no-gutters {
@@ -620,8 +646,8 @@ hr {
 }
 
 .alproces .process {
-  background-color: #ddf144;
-  border: solid 1px #a2b22a;
+  background-color: #acb858;
+  border: solid 1px #6e7921;
 }
 
 .alproces .live {
@@ -667,7 +693,7 @@ hr {
 }
 
 .liveMatch li {
-  padding: 0px 15px !important;
+  padding: 0px 10px !important;
 }
 
 input[type=checkbox] {

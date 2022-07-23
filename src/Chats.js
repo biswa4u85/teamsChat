@@ -49,10 +49,11 @@ function Chats() {
     window?.frappe?.socketio.init(9000);
     window?.frappe?.socketio.socket.on("send_message", recvMessage);
     // window?.frappe?.socketio.socket.on("send_chat", recvChat);
+
     setInterval(() => {
       updateTime(5)
-      // recvMessage("{\"mobile_number\": \"MN-00039867\", \"brand\": \"LotusExch\", \"conversation\": \"CONV-1657102671442\", \"state\": \"deposit_website_state\", \"message_id\": \"181846\", \"sender\": \"1\", \"message_type\": \"0\", \"content\": \"Select%20a%20%F0%9F%86%94%20\", \"timestamp\": \"1657102674\\n\", \"live\": 0}")
-    }, 1000)
+      // recvMessage(`{\"mobile_number\": \"MN-00043301\", \"brand\": \"LionBook\", \"conversation\": \"CONV-1658509612244\", \"state\": \"withdraw_success\", \"message_id\": \"2261956\", \"sender\": \"1\", \"message_type\": \"0\", \"content\": \"Payout%20500.0rs%20from%20desurendra1%20successful\", \"timestamp\": \"1658540368\\n\", \"live\": 1}`)
+    }, 10000)
   }, []);
 
 
@@ -83,39 +84,84 @@ function Chats() {
 
   const recvMessage = (msg) => {
     let data = JSON.parse(msg);
-    data.content = data.content ? decodeURIComponent(data.content) : data.content;
+    if (data && data.content) {
+      data.content = data.content ? decodeURIComponent(data.content) : data.content;
 
-    // check New User
-    if (data.mobile_number in tempMessagesIds.current === false) {
-      tempMessagesIds.current[data.mobile_number] = true
-      getChats(data.mobile_number)
-    }
+      // check New User
+      if (data.mobile_number in tempMessagesIds.current === false) {
+        tempMessagesIds.current[data.mobile_number] = true
+        getChats(data.mobile_number)
+      }
 
-    // Update Chat Messages
-    if (selChatsLive.current && selChatsLive.current.name == data.mobile_number) {
-      let newMessage = [...messagesLive.current, data]
-      messagesLive.current = newMessage
-      setMessages(messagesLive.current)
-      setTimeout(() => chatMenuRef.current.scrollIntoView({ behavior: "smooth" }), 100)
-    }
+      // Update Chat Messages
+      if (selChatsLive.current && selChatsLive.current.name == data.mobile_number) {
+        let newMessage = [...messagesLive.current, data]
+        messagesLive.current = newMessage
+        setMessages(messagesLive.current)
+        setTimeout(() => chatMenuRef.current.scrollIntoView({ behavior: "smooth" }), 100)
+      }
 
-    // Update Chat Menu 
-    if (brandWiseChats.current[data.brand] && data.mobile_number) {
-      let newData = brandWiseChats.current[data.brand][data.mobile_number]
-      if (newData) {
-        newData.messages.push(data)
-        newData.last_seen = data.timestamp;
-        newData.live = data.live
-        newData.state = data.state;
-        newData.last_msg = data;
-        newData.liveStarted = (data.content).includes('Live Chat started') ? true : false
-        brandWiseChats.current[data.brand][data.mobile_number] = newData
-        let sortCurrentChats = moveObjectElement(data.mobile_number, '', JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current])));
-        setCurrentChats(sortCurrentChats)
-        if (newData.liveStarted) {
-          randerBrands(false, data.brand)
-          playSound(data.brand)
-          setTimeout(() => playSound(data.brand), 1000)
+      // Update Chat Menu 
+      if (brandWiseChats.current[data.brand] && data.mobile_number) {
+        let newData = brandWiseChats.current[data.brand][data.mobile_number]
+        if (newData) {
+          newData.messages.push(data)
+          newData.last_seen = data.timestamp;
+          newData.live = data.live
+          newData.state = data.state;
+          newData.last_msg = data;
+          newData.liveStarted = (data.content).includes('Live Chat started') ? true : false
+          brandWiseChats.current[data.brand][data.mobile_number] = newData
+          if (data.brand == selBrand.current) {
+            let _live = parseInt(newData.live) ? '<span style="color: red;">LIVE</span>' : '';
+            let full_name = `${newData.first_name || ''} ${newData.last_name || ''}`.trim();
+            let _tab_identifier = `${newData.mobile_number} ${newData.telegram_username ? '(@' + newData.telegram_username + ')' : ''} - ${full_name}`;
+            let _tab_msg = `${parseInt(newData?.last_msg?.sender) ? 'Bot' : 'User'}: ${newData?.last_msg?.content || 'New Chat'}`;
+            $(`#${data.mobile_number} .message-count`).text(newData?.messages?.length);
+            $(`#${data.mobile_number} .message-head`).html(`${_live} ${_tab_identifier}`);
+            $(`#${data.mobile_number} .message-text`).text(_tab_msg);
+            $(`#${data.mobile_number}`).prependTo($("#chatBox"));
+
+            // $('.tab-time').toArray().forEach(e => {
+            //   let tab_time = $(e);
+            //   let timestamp = parseInt(tab_time.attr('timestamp'));
+            //   let time_str_new = new Date(timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
+            //   if (timestamp) {
+            //     let time_str = time_ago(timestamp);
+            //     tab_time.text(time_str);
+            //     tab_time.attr('title', time_str);
+            //   }
+            // });
+
+            // console.log(currentChats)
+            // let sortCurrentChats = moveObjectElement(data.mobile_number, '', JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current])));
+            // setCurrentChats(sortCurrentChats)
+            // filterChats()
+          }
+
+          // if (data.brand == selBrand.current) {
+          //   let _tab_msg = `${parseInt(newData?.last_msg?.sender) ? 'Bot' : 'User'}: ${newData?.last_msg?.content || 'New Chat'}`;
+          //   let timestamp = parseInt(newData?.last_msg?.timestamp) * 1000 || 0;
+          //   let _tab_time = timestamp ? time_ago(timestamp) : '';
+
+          //   let msgsHtml = `<div id=${newData.name} class="friend-drawer friend-drawer--onhover">
+          //   <img class="profile-image" src="https://ui-avatars.com/api/?name=${newData.first_name + ' ' + newData.last_name}" alt="">
+          //   <div class="text">
+          //   <h6>${newData.name}  - ${newData.first_name || ''} ${newData.last_name || ''}</h6>
+          //   <div>${_tab_msg}</div>
+          //   </div>
+          //   <div class="message-count">${newData?.messages?.length}</div>
+          //   <span class="time text-muted small message-time tab-time text-overflow" timestamp=${timestamp} title=>${_tab_time}>${_tab_time}</span>
+          //   </div>`
+          //   $(`#${data.mobile_number}`).remove();
+          //   $("#chatBox").prepend(msgsHtml);
+          //   filterChats()
+          // }
+          if (newData.liveStarted) {
+            randerBrands(false, data.brand)
+            playSound(data.brand)
+            setTimeout(() => playSound(data.brand), 2000)
+          }
         }
       }
     }
@@ -340,7 +386,7 @@ function Chats() {
       $(this).find('.friend-drawer').removeClass('tab-focus');
     });
     $(`#${data.name}`).addClass("tab-focus");
-    data['time_str'] = new Date(data.last_msg.timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
+    data['time_str'] = new Date(data?.last_msg?.timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
     setSelChats(data)
     selChatsLive.current = data
     messagesLive.current = data.messages
@@ -408,6 +454,12 @@ function Chats() {
         setNewMessage('')
       }
     }
+  }
+
+  const closeCurrentChart = () => {
+    delete brandWiseChats.current[selBrand.current][selChats.name]
+    delete tempMessagesIds.current[selChats.name]
+    selectBrand(selBrand.current)
   }
 
   const updateTime = () => {
@@ -542,25 +594,27 @@ function Chats() {
             </div>
           </div>
 
-          <div className="leftMenu">
+          <div className="leftMenu" id="chatBox">
             {Object.keys(currentChats).map((item, key) => {
-              let chats = currentChats[item] ? currentChats[item] : {}
-              let _live = parseInt(chats.live) ? '<span style="color: red;">LIVE</span>' : '';
-              let full_name = `${chats.first_name || ''} ${chats.last_name || ''}`.trim();
-              let _tab_identifier = `${chats.mobile_number} ${chats.telegram_username ? '(@' + chats.telegram_username + ')' : ''} - ${full_name}`;
-              let timestamp = parseInt(chats.last_msg.timestamp) * 1000 || 0;
-              let _tab_msg = `${parseInt(chats.last_msg.sender) ? 'Bot' : 'User'}: ${chats.last_msg.content || 'New Chat'}`;
-              let _tab_time = timestamp ? time_ago(timestamp) : '';
-              let isImg = _tab_msg.split(':\nIMG:')
-              return <div key={key} id={chats.name} className={"friend-drawer friend-drawer--onhover "} onClick={() => selectChat(chats)}>
-                <img className="profile-image" src={`https://ui-avatars.com/api/?name=${chats.first_name + ' ' + chats.last_name}`} alt="" />
-                <div className="text">
-                  <h6 dangerouslySetInnerHTML={{ __html: _live + ' ' + _tab_identifier }}></h6>
-                  {isImg[1] ? <><div style={{ display: 'inline' }} dangerouslySetInnerHTML={{ __html: isImg[0] }} /> <img width={15} src={isImg[1]} alt="" /></> : <div dangerouslySetInnerHTML={{ __html: _tab_msg }} />}
+              let chats = currentChats[item] ? currentChats[item] : null
+              if (chats) {
+                let _live = parseInt(chats.live) ? '<span style="color: red;">LIVE</span>' : ' ';
+                let full_name = `${chats.first_name || ''} ${chats.last_name || ''}`.trim();
+                let _tab_identifier = `${chats.mobile_number} ${chats.telegram_username ? '(@' + chats.telegram_username + ')' : ''} - ${full_name}`;
+                let timestamp = parseInt(chats?.last_msg?.timestamp) * 1000 || 0;
+                let _tab_msg = `${parseInt(chats?.last_msg?.sender) ? 'Bot' : 'User'}: ${chats?.last_msg?.content || 'New Chat'}`;
+                let _tab_time = timestamp ? time_ago(timestamp) : '';
+                let isImg = _tab_msg.split(':\nIMG:')
+                return <div key={key} id={chats.name} className={"friend-drawer friend-drawer--onhover "} onClick={() => selectChat(chats)}>
+                  <img className="profile-image" src={`https://ui-avatars.com/api/?name=${chats.first_name + ' ' + chats.last_name}`} alt="" />
+                  <div className="text">
+                    <h6 className="message-head" dangerouslySetInnerHTML={{ __html: _live + ' ' + _tab_identifier }}></h6>
+                    {isImg[1] ? <><div className="message-text" style={{ display: 'inline' }} dangerouslySetInnerHTML={{ __html: isImg[0] }} /> <img width={15} src={isImg[1]} alt="" /></> : <div className="message-text" dangerouslySetInnerHTML={{ __html: _tab_msg }} />}
+                  </div>
+                  <div className="message-count"> {chats.messages?.length} </div>
+                  <span className="time text-muted small message-time tab-time text-overflow" timestamp={timestamp} title={_tab_time}>{_tab_time}</span>
                 </div>
-                <div className="message-count"> {chats.messages?.length} </div>
-                <span className="time text-muted small message-time tab-time text-overflow" timestamp={timestamp} title={_tab_time}>{_tab_time}</span>
-              </div>
+              }
             }
             )}
           </div>
@@ -568,6 +622,7 @@ function Chats() {
         </div>
         <div className="col-md-8">
           <div className="settings-tray">
+            {selChats && (<div className="closeChart"><i onClick={closeCurrentChart} className="fa fa-times" aria-hidden="true"></i></div>)}
             <div className="friend-drawer no-gutters friend-drawer--grey">
               <img className="profile-image" src={`https://ui-avatars.com/api/?name=${selChats?.first_name + ' ' + selChats?.last_name}`} alt="" />
               <div className="text">
@@ -604,6 +659,7 @@ function Chats() {
                     <input type="checkbox" name="liveCheck" checked={live} value="live" onChange={updateLive} />
                     <Emoji enableTxt={addEmoji} />
                     <input ref={messageRef} type="text" placeholder="Type your message here..." value={newMessage} onChange={(event) => addMessage(event.target.value)} />
+                    <i onClick={handleSubmit} className="fa fa-paper-plane" aria-hidden="true"></i>
                     <label className="upload-file">
                       <input type="file" onChange={uploadFile} />
                       <i className="fa fa-paperclip"></i>
@@ -612,7 +668,6 @@ function Chats() {
                       {selTemplate.map((item, key) => <div key={key} onClick={() => addTemplate(item)}>{item.name}</div>)}
                     </div>)}
                     <i className="fa fa-microphone" aria-hidden="true"></i>
-                    <i onClick={handleSubmit} className="fa fa-paper-plane" aria-hidden="true"></i>
                   </div>
                 </div>
               </form>
