@@ -52,8 +52,8 @@ function Chats() {
 
     setInterval(() => {
       updateTime(5)
-      // recvMessage(`{\"mobile_number\": \"MN-00043301\", \"brand\": \"LionBook\", \"conversation\": \"CONV-1658509612244\", \"state\": \"withdraw_success\", \"message_id\": \"2261956\", \"sender\": \"1\", \"message_type\": \"0\", \"content\": \"Payout%20500.0rs%20from%20desurendra1%20successful\", \"timestamp\": \"1658540368\\n\", \"live\": 1}`)
-    }, 10000)
+      // recvMessage(`{\"mobile_number\": \"MN-00033867\", \"brand\": \"LionBook\", \"conversation\": \"CONV-1658763003041\", \"state\": \"deposit_mode_state\", \"message_id\": \"2301230\", \"sender\": \"0\", \"message_type\": \"1\", \"content\": \"pmode_intent\", \"timestamp\": \"1658763016\\n\", \"live\": 0}`)
+    }, 1000)
   }, []);
 
 
@@ -119,7 +119,7 @@ function Chats() {
             let _tab_msg = `${parseInt(newData?.last_msg?.sender) ? 'Bot' : 'User'}: ${newData?.last_msg?.content || 'New Chat'}`;
             $(`#${data.mobile_number} .message-count`).text(newData?.messages?.length);
             $(`#${data.mobile_number} .message-head`).html(`${_live} ${_tab_identifier}`);
-            $(`#${data.mobile_number} .message-text`).text(_tab_msg);
+            $(`#${data.mobile_number} .message-text`).html(_tab_msg);
             $(`#${data.mobile_number}`).prependTo($("#chatBox"));
 
             // $('.tab-time').toArray().forEach(e => {

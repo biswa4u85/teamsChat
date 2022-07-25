@@ -34,9 +34,9 @@ body {
 }
 
 .containers {
-  margin: 10px 0;
+  margin: 5px;
   background: #fff;
-  padding: 0;
+  padding: 15px;
   min-height: 86vh;
   border-radius: 7px;
 }
@@ -48,6 +48,7 @@ body {
 
 .chatMenu {
   height: 69.5vh;
+  padding: 15px;
   overflow: scroll;
 }
 
@@ -463,9 +464,9 @@ hr {
   padding: 5px;
   border: solid 0.5px #ccc;
   border-radius: 5px;
-  /* position: absolute;
+  position: absolute;
   top: 2px;
-  left: 100px; */
+  left: 100px;
   width: 87%;
 }
 
@@ -594,10 +595,10 @@ hr {
 }
 
 .topFilter {
-  /* position: absolute;
+  position: absolute;
   top: 2px;
   left: 100px;
-  width: 87%; */
+  width: 87%;
 }
 
 .topFilter .filterBox {
