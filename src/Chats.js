@@ -457,9 +457,11 @@ function Chats() {
   }
 
   const closeCurrentChart = () => {
-    delete brandWiseChats.current[selBrand.current][selChats.name]
-    delete tempMessagesIds.current[selChats.name]
-    selectBrand(selBrand.current)
+    if (window.confirm('Are you sure to remove ?') == true) {
+      delete brandWiseChats.current[selBrand.current][selChats.name]
+      delete tempMessagesIds.current[selChats.name]
+      selectBrand(selBrand.current)
+    }
   }
 
   const updateTime = () => {
