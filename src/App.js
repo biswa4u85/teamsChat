@@ -3,6 +3,7 @@ import './App.css';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import Chats from './Chats'
+// import ChatElements from './ChatElements'
 
 function App() {
   // if (!window?.frappe?.session?.user) {
@@ -12,6 +13,7 @@ function App() {
     <>
       <ToastContainer />
       <Chats />
+      {/* <ChatElements /> */}
     </>
   );
 }

@@ -4,6 +4,9 @@ import Config from "./Config";
 import { parse_msgs, time_ago, moveObjectElement } from './Utils'
 import { apiPostCall, fileUpload } from './services/site-apis'
 import Emoji from './Emoji'
+import "react-chat-elements/dist/main.css"
+import UserLists from './ChatElements/UserLists'
+import Messages from './ChatElements/Messages'
 
 const recentTabOptions = [
   { value: 'all', label: 'ALL' },
@@ -49,9 +52,13 @@ function Chats() {
     window?.frappe?.socketio.init(9000);
     window?.frappe?.socketio.socket.on("send_message", recvMessage);
     // window?.frappe?.socketio.socket.on("send_chat", recvChat);
+
+    setInterval(() => {
+      recvMessage(`{\"mobile_number\": \"MN-00033867\", \"brand\": \"LionBook\", \"conversation\": \"CONV-1658763003041\", \"state\": \"deposit_mode_state\", \"message_id\": \"2301230\", \"sender\": \"0\", \"message_type\": \"1\", \"content\": \"pmode_intent\", \"timestamp\": \"1658763016\\n\", \"live\": 0}`)
+    }, 10000)
+
     setInterval(() => {
       updateTime(5)
-      recvMessage(`{\"mobile_number\": \"MN-00041567\", \"brand\": \"JitoDaily\", \"conversation\": \"CONV-1659412344811\", \"state\": \"withdraw_menu\", \"message_id\": \"718210\", \"sender\": \"0\", \"message_type\": \"0\", \"content\": \"Withdraw%20%F0%9F%92%B8\", \"timestamp\": \"1659412344\\n\", \"live\": 0}`)
     }, 1000)
   }, []);
 
@@ -116,49 +123,11 @@ function Chats() {
             let full_name = `${newData.first_name || ''} ${newData.last_name || ''}`.trim();
             let _tab_identifier = `${newData.mobile_number} ${newData.telegram_username ? '(@' + newData.telegram_username + ')' : ''} - ${full_name}`;
             let _tab_msg = `${parseInt(newData?.last_msg?.sender) ? 'Bot' : 'User'}: ${newData?.last_msg?.content || 'New Chat'}`;
-            let timestamp = parseInt(newData?.last_seen) * 1000 || 0;
-            let _tab_time = timestamp ? time_ago(timestamp) : '';
-            $(`#${data.mobile_number} .message-time`).text(_tab_time);
             $(`#${data.mobile_number} .message-count`).text(newData?.messages?.length);
             $(`#${data.mobile_number} .message-head`).html(`${_live} ${_tab_identifier}`);
             $(`#${data.mobile_number} .message-text`).html(_tab_msg);
             $(`#${data.mobile_number}`).prependTo($("#chatBox"));
-
-            // $('.tab-time').toArray().forEach(e => {
-            //   let tab_time = $(e);
-            //   let timestamp = parseInt(tab_time.attr('timestamp'));
-            //   let time_str_new = new Date(timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
-            //   if (timestamp) {
-            //     let time_str = time_ago(timestamp);
-            //     tab_time.text(time_str);
-            //     tab_time.attr('title', time_str);
-            //   }
-            // });
-
-            // console.log(currentChats)
-            // let sortCurrentChats = moveObjectElement(data.mobile_number, '', JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current])));
-            // setCurrentChats(sortCurrentChats)
-            // filterChats()
           }
-
-          // if (data.brand == selBrand.current) {
-          //   let _tab_msg = `${parseInt(newData?.last_msg?.sender) ? 'Bot' : 'User'}: ${newData?.last_msg?.content || 'New Chat'}`;
-          //   let timestamp = parseInt(newData?.last_msg?.timestamp) * 1000 || 0;
-          //   let _tab_time = timestamp ? time_ago(timestamp) : '';
-
-          //   let msgsHtml = `<div id=${newData.name} class="friend-drawer friend-drawer--onhover">
-          //   <img class="profile-image" src="https://ui-avatars.com/api/?name=${newData.first_name + ' ' + newData.last_name}" alt="">
-          //   <div class="text">
-          //   <h6>${newData.name}  - ${newData.first_name || ''} ${newData.last_name || ''}</h6>
-          //   <div>${_tab_msg}</div>
-          //   </div>
-          //   <div class="message-count">${newData?.messages?.length}</div>
-          //   <span class="time text-muted small message-time tab-time text-overflow" timestamp=${timestamp} title=>${_tab_time}>${_tab_time}</span>
-          //   </div>`
-          //   $(`#${data.mobile_number}`).remove();
-          //   $("#chatBox").prepend(msgsHtml);
-          //   filterChats()
-          // }
           if (newData.liveStarted) {
             randerBrands(false, data.brand)
             playSound(data.brand)
@@ -387,11 +356,12 @@ function Chats() {
 
   }
 
-  const selectChat = (data) => {
+  const selectChat = (item) => {
+    let data = brandWiseChats.current[selBrand.current][item.id]
     $('.leftMenu').each(function () {
-      $(this).find('.friend-drawer').removeClass('tab-focus');
+      $(this).find('.friend-drawer-item').removeClass('tab-focus');
     });
-    $(`#${data.name}`).addClass("tab-focus");
+    $(`.ch_${data.name}`).addClass("tab-focus");
     data['time_str'] = new Date(data?.last_msg?.timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
     setSelChats(data)
     selChatsLive.current = data
@@ -471,7 +441,14 @@ function Chats() {
   }
 
   const updateTime = () => {
-    $('.tab-time').toArray().forEach(e => {
+    // for (let brands in brandWiseChats.current) {
+    //   for (let name in brandWiseChats.current[brands]) {
+    //     console.log(name)
+    //   }
+    // }
+
+
+    $('.rce-citem-body--top-time').toArray().forEach(e => {
       let tab_time = $(e);
       let timestamp = parseInt(tab_time.attr('timestamp'));
       let time_str_new = new Date(timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
@@ -603,28 +580,7 @@ function Chats() {
           </div>
 
           <div className="leftMenu" id="chatBox">
-            {Object.keys(currentChats).map((item, key) => {
-              let chats = currentChats[item] ? currentChats[item] : null
-              if (chats) {
-                let _live = parseInt(chats.live) ? '<span style="color: red;">LIVE</span>' : ' ';
-                let full_name = `${chats.first_name || ''} ${chats.last_name || ''}`.trim();
-                let _tab_identifier = `${chats.mobile_number} ${chats.telegram_username ? '(@' + chats.telegram_username + ')' : ''} - ${full_name}`;
-                let timestamp = parseInt(chats?.last_msg?.timestamp) * 1000 || 0;
-                let _tab_msg = `${parseInt(chats?.last_msg?.sender) ? 'Bot' : 'User'}: ${chats?.last_msg?.content || 'New Chat'}`;
-                let _tab_time = timestamp ? time_ago(timestamp) : '';
-                let isImg = _tab_msg.split(':\nIMG:')
-                return <div key={key} id={chats.name} className={"friend-drawer friend-drawer--onhover "} onClick={() => selectChat(chats)}>
-                  <img className="profile-image" src={`https://ui-avatars.com/api/?name=${chats.first_name + ' ' + chats.last_name}`} alt="" />
-                  <div className="text">
-                    <h6 className="message-head" dangerouslySetInnerHTML={{ __html: _live + ' ' + _tab_identifier }}></h6>
-                    {isImg[1] ? <><div className="message-text" style={{ display: 'inline' }} dangerouslySetInnerHTML={{ __html: isImg[0] }} /> <img width={15} src={isImg[1]} alt="" /></> : <div className="message-text" dangerouslySetInnerHTML={{ __html: _tab_msg }} />}
-                  </div>
-                  <div className="message-count"> {chats.messages?.length} </div>
-                  <span className="time text-muted small message-time tab-time text-overflow" timestamp={timestamp} title={_tab_time}>{_tab_time}</span>
-                </div>
-              }
-            }
-            )}
+            <UserLists data={currentChats} selectChat={selectChat} />
           </div>
 
         </div>

@@ -5,6 +5,16 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+.rce-citem {
+  background: inherit !important;
+}
+
+.message-head {
+  font-weight: bold;
+}
+
+.message-text {}
+
 .web-footer {
   display: none !important;
 }
@@ -164,6 +174,10 @@ input:focus {
 .friend-drawer .text {
   margin-left: 12px;
   width: 78%;
+}
+
+.settings-tray .friend-drawer--grey h6 {
+  color: #fff;
 }
 
 .friend-drawer .text h6 {
@@ -595,7 +609,7 @@ hr {
 }
 
 .topFilter {
-  position: absolute;
+  /* position: absolute; */
   top: 2px;
   left: 100px;
   width: 87%;
