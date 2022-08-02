@@ -51,7 +51,7 @@ function Chats() {
     // window?.frappe?.socketio.socket.on("send_chat", recvChat);
     setInterval(() => {
       updateTime(5)
-      recvMessage(`{\"mobile_number\": \"MN-00041567\", \"brand\": \"JitoDaily\", \"conversation\": \"CONV-1659412344811\", \"state\": \"withdraw_menu\", \"message_id\": \"718210\", \"sender\": \"0\", \"message_type\": \"0\", \"content\": \"Withdraw%20%F0%9F%92%B8\", \"timestamp\": \"1659412344\\n\", \"live\": 0}`)
+      // recvMessage(`{\"mobile_number\": \"MN-00041567\", \"brand\": \"JitoDaily\", \"conversation\": \"CONV-1659412344811\", \"state\": \"withdraw_menu\", \"message_id\": \"718210\", \"sender\": \"0\", \"message_type\": \"0\", \"content\": \"Withdraw%20%F0%9F%92%B8\", \"timestamp\": \"1659412344\\n\", \"live\": 0}`)
     }, 1000)
   }, []);
 
