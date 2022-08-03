@@ -27,7 +27,7 @@ function Chats() {
   let brandWiseChats = useRef({});
   let selBrand = useRef(null);
   const [brands, setBrands] = useState({})
-  const [currentChats, setCurrentChats] = useState({})
+  const [currentChats, setCurrentChats] = useState([])
   let recent = useRef(recentTabOptions[0]);
   const [recentVal, setRecentVal] = useState(recentTabOptions[0])
   let state = useRef(stateTabOptions[0]);
@@ -51,8 +51,8 @@ function Chats() {
     // window?.frappe?.socketio.socket.on("send_chat", recvChat);
     setInterval(() => {
       updateTime(5)
-      // recvMessage(`{\"mobile_number\": \"MN-00041567\", \"brand\": \"JitoDaily\", \"conversation\": \"CONV-1659412344811\", \"state\": \"withdraw_menu\", \"message_id\": \"718210\", \"sender\": \"0\", \"message_type\": \"0\", \"content\": \"Withdraw%20%F0%9F%92%B8\", \"timestamp\": \"1659412344\\n\", \"live\": 0}`)
-    }, 1000)
+      // recvMessage(`{\"mobile_number\": \"MN-00041436\", \"brand\": \"LotusExch\", \"conversation\": \"CONV-1659413185683\", \"state\": \"deposit_amount_state\", \"message_id\": \"376379\", \"sender\": \"1\", \"message_type\": \"0\", \"content\": \"Amount%20to%20deposit%3A%204500\", \"timestamp\": \"1659413198\\n\", \"live\": 0}`)
+    }, 10000)
   }, []);
 
 
@@ -88,7 +88,7 @@ function Chats() {
 
       // check New User
       if (data.mobile_number in tempMessagesIds.current === false) {
-        tempMessagesIds.current[data.mobile_number] = true
+        tempMessagesIds.current[data.mobile_number] = data.brand
         getChats(data.mobile_number)
       }
 
@@ -123,42 +123,7 @@ function Chats() {
             $(`#${data.mobile_number} .message-head`).html(`${_live} ${_tab_identifier}`);
             $(`#${data.mobile_number} .message-text`).html(_tab_msg);
             $(`#${data.mobile_number}`).prependTo($("#chatBox"));
-
-            // $('.tab-time').toArray().forEach(e => {
-            //   let tab_time = $(e);
-            //   let timestamp = parseInt(tab_time.attr('timestamp'));
-            //   let time_str_new = new Date(timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
-            //   if (timestamp) {
-            //     let time_str = time_ago(timestamp);
-            //     tab_time.text(time_str);
-            //     tab_time.attr('title', time_str);
-            //   }
-            // });
-
-            // console.log(currentChats)
-            // let sortCurrentChats = moveObjectElement(data.mobile_number, '', JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current])));
-            // setCurrentChats(sortCurrentChats)
-            // filterChats()
           }
-
-          // if (data.brand == selBrand.current) {
-          //   let _tab_msg = `${parseInt(newData?.last_msg?.sender) ? 'Bot' : 'User'}: ${newData?.last_msg?.content || 'New Chat'}`;
-          //   let timestamp = parseInt(newData?.last_msg?.timestamp) * 1000 || 0;
-          //   let _tab_time = timestamp ? time_ago(timestamp) : '';
-
-          //   let msgsHtml = `<div id=${newData.name} class="friend-drawer friend-drawer--onhover">
-          //   <img class="profile-image" src="https://ui-avatars.com/api/?name=${newData.first_name + ' ' + newData.last_name}" alt="">
-          //   <div class="text">
-          //   <h6>${newData.name}  - ${newData.first_name || ''} ${newData.last_name || ''}</h6>
-          //   <div>${_tab_msg}</div>
-          //   </div>
-          //   <div class="message-count">${newData?.messages?.length}</div>
-          //   <span class="time text-muted small message-time tab-time text-overflow" timestamp=${timestamp} title=>${_tab_time}>${_tab_time}</span>
-          //   </div>`
-          //   $(`#${data.mobile_number}`).remove();
-          //   $("#chatBox").prepend(msgsHtml);
-          //   filterChats()
-          // }
           if (newData.liveStarted) {
             randerBrands(false, data.brand)
             playSound(data.brand)
@@ -172,7 +137,6 @@ function Chats() {
   const recvChat = (msg) => {
     let data = JSON.parse(msg);
     randerBrandWiseChats([data], false)
-    // console.log('bb ', data)
   }
 
   const randerBrandWiseChats = (data, brand = null) => {
@@ -207,7 +171,11 @@ function Chats() {
     randerBrands(brand, null)
     if (!brand && data && data[0]) {
       let sortCurrentChats = moveObjectElement(data[0].name, '', JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current])));
-      setCurrentChats(sortCurrentChats)
+      let sortable = Object.values(sortCurrentChats)
+      sortable = sortable.sort(function (a, b) {
+        return new Date(b.last_seen) - new Date(a.last_seen);
+      });
+      setCurrentChats(sortable)
     }
     filterChats()
   }
@@ -254,7 +222,11 @@ function Chats() {
   const selectBrand = (data) => {
     selBrand.current = data
     let currentChats = JSON.parse(JSON.stringify(brandWiseChats.current[data]))
-    setCurrentChats(currentChats)
+    let sortable = Object.values(currentChats)
+    sortable = sortable.sort(function (a, b) {
+      return new Date(b.last_seen) - new Date(a.last_seen);
+    });
+    setCurrentChats(sortable)
     setSelTemplate([])
     getTemplate(data)
     messagesLive.current = []
@@ -603,8 +575,8 @@ function Chats() {
           </div>
 
           <div className="leftMenu" id="chatBox">
-            {Object.keys(currentChats).map((item, key) => {
-              let chats = currentChats[item] ? currentChats[item] : null
+            {currentChats.map((chats, key) => {
+              // let chats = currentChats[item] ? currentChats[item] : null
               if (chats) {
                 let _live = parseInt(chats.live) ? '<span style="color: red;">LIVE</span>' : ' ';
                 let full_name = `${chats.first_name || ''} ${chats.last_name || ''}`.trim();
