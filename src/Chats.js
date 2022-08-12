@@ -52,7 +52,7 @@ function Chats() {
     setInterval(() => {
       updateTime(5)
       // recvMessage(`{\"mobile_number\": \"MN-00041436\", \"brand\": \"LotusExch\", \"conversation\": \"CONV-1659413185683\", \"state\": \"deposit_amount_state\", \"message_id\": \"376379\", \"sender\": \"1\", \"message_type\": \"0\", \"content\": \"Amount%20to%20deposit%3A%204500\", \"timestamp\": \"1659413198\\n\", \"live\": 0}`)
-    }, 10000)
+    }, 1000)
   }, []);
 
 
@@ -102,7 +102,7 @@ function Chats() {
 
       // Update Chat Menu 
       if (brandWiseChats.current[data.brand] && data.mobile_number) {
-        let newData = brandWiseChats.current[data.brand][data.mobile_number]
+        let newData = JSON.parse(JSON.stringify(brandWiseChats.current[data.brand][data.mobile_number]))
         if (newData) {
           newData.messages.push(data)
           newData.last_seen = data.timestamp;
