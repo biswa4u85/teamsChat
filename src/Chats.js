@@ -460,7 +460,7 @@ function Chats() {
 
   const updateLive = async () => {
     setLive(!live)
-    if (selChats) {
+    if (selChats && selChats.live) {
       let params = `doctype=Conversation+Log&name=${selChats.current_conversation}&fieldname=%7B%22live%22%3A${!live}%7D&cmd=frappe.client.set_value`;
       let data = await apiPostCall('/', params, window?.frappe?.csrf_token)
       if (data.message) {
