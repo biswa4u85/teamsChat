@@ -102,7 +102,7 @@ function Chats() {
 
       // Update Chat Menu 
       if (brandWiseChats.current[data.brand] && data.mobile_number) {
-        let newData = JSON.parse(JSON.stringify(brandWiseChats.current[data.brand][data.mobile_number]))
+        let newData = brandWiseChats.current[data.brand][data.mobile_number]
         if (newData) {
           newData.messages.push(data)
           newData.last_seen = data.timestamp;
@@ -581,7 +581,7 @@ function Chats() {
                 let _live = parseInt(chats.live) ? '<span style="color: red;">LIVE</span>' : ' ';
                 let full_name = `${chats.first_name || ''} ${chats.last_name || ''}`.trim();
                 let _tab_identifier = `${chats.mobile_number} ${chats.telegram_username ? '(@' + chats.telegram_username + ')' : ''} - ${full_name}`;
-                let timestamp = parseInt(chats?.last_msg?.timestamp) * 1000 || 0;
+                let timestamp = parseInt(chats?.last_seen) * 1000 || 0;
                 let _tab_msg = `${parseInt(chats?.last_msg?.sender) ? 'Bot' : 'User'}: ${chats?.last_msg?.content || 'New Chat'}`;
                 let _tab_time = timestamp ? time_ago(timestamp) : '';
                 let isImg = _tab_msg.split(':\nIMG:')
