@@ -51,7 +51,7 @@ function Chats() {
     // window?.frappe?.socketio.socket.on("send_chat", recvChat);
     setInterval(() => {
       updateTime(5)
-      // recvMessage(`{\"mobile_number\": \"MN-00041436\", \"brand\": \"LotusExch\", \"conversation\": \"CONV-1659413185683\", \"state\": \"deposit_amount_state\", \"message_id\": \"376379\", \"sender\": \"1\", \"message_type\": \"0\", \"content\": \"Amount%20to%20deposit%3A%204500\", \"timestamp\": \"1659413198\\n\", \"live\": 0}`)
+      // recvMessage(`{\"mobile_number\": \"MN-00041042\", \"brand\": \"JitoDaily\", \"conversation\": \"CONV-1656600076990\", \"state\": \"error_menu\", \"message_id\": \"792951\", \"sender\": \"0\", \"message_type\": \"0\", \"content\": \"Hi\", \"timestamp\": \"1660645221\\n\", \"live\": 0}`)
     }, 1000)
   }, []);
 
@@ -102,7 +102,7 @@ function Chats() {
 
       // Update Chat Menu 
       if (brandWiseChats.current[data.brand] && data.mobile_number) {
-        let newData = brandWiseChats.current[data.brand][data.mobile_number]
+        let newData = JSON.parse(JSON.stringify(brandWiseChats.current[data.brand][data.mobile_number]))
         if (newData) {
           newData.messages.push(data)
           newData.last_seen = data.timestamp;
@@ -169,7 +169,7 @@ function Chats() {
     }
     brandWiseChats.current = tempOldData
     randerBrands(brand, null)
-    if (!brand && data && data[0]) {
+    if (!brand && data && data[0] && brandWiseChats.current[selBrand.current]) {
       let sortCurrentChats = moveObjectElement(data[0].name, '', JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current])));
       let sortable = Object.values(sortCurrentChats)
       sortable = sortable.sort(function (a, b) {
@@ -359,7 +359,8 @@ function Chats() {
 
   }
 
-  const selectChat = (data) => {
+  const selectChat = (item) => {
+    let data = JSON.parse(JSON.stringify(brandWiseChats.current[item.brand][item.name]))
     $('.leftMenu').each(function () {
       $(this).find('.friend-drawer').removeClass('tab-focus');
     });
@@ -402,6 +403,8 @@ function Chats() {
         }
         setSelTemplate(selTemplate)
       }, 500)
+    } else {
+      setSelTemplate([])
     }
     if (selChats) {
       setNewMessage(data)
@@ -576,7 +579,6 @@ function Chats() {
 
           <div className="leftMenu" id="chatBox">
             {currentChats.map((chats, key) => {
-              // let chats = currentChats[item] ? currentChats[item] : null
               if (chats) {
                 let _live = parseInt(chats.live) ? '<span style="color: red;">LIVE</span>' : ' ';
                 let full_name = `${chats.first_name || ''} ${chats.last_name || ''}`.trim();
@@ -602,7 +604,7 @@ function Chats() {
         </div>
         <div className="col-md-8">
           <div className="settings-tray">
-            {selChats && (<div className="closeChart"><i onClick={closeCurrentChart} className="fa fa-times" aria-hidden="true"></i></div>)}
+            {/* {selChats && (<div className="closeChart"><i onClick={closeCurrentChart} className="fa fa-times" aria-hidden="true"></i></div>)} */}
             <div className="friend-drawer no-gutters friend-drawer--grey">
               <img className="profile-image" src={`https://ui-avatars.com/api/?name=${selChats?.first_name + ' ' + selChats?.last_name}`} alt="" />
               <div className="text">
