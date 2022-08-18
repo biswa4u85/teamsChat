@@ -105,7 +105,8 @@ function Chats() {
         let newData = JSON.parse(JSON.stringify(brandWiseChats.current[data.brand][data.mobile_number]))
         if (newData) {
           newData.messages.push(data)
-          newData.last_seen = data.timestamp;
+          // newData.last_seen = data.timestamp;
+          newData.last_seen = Math.floor(Date.now() / 1000)
           newData.live = data.live
           newData.state = data.state;
           newData.last_msg = data;
@@ -392,7 +393,7 @@ function Chats() {
 
   const addMessage = (data) => {
     let checkTemplate = data.split('/')
-    if (checkTemplate[1]) {
+    if (checkTemplate[1] && checkTemplate[1] != '') {
       clearTimeout(timer.current)
       let selTemplate = []
       timer.current = setTimeout(() => {
