@@ -35,6 +35,7 @@ function Chats() {
   let selChatType = useRef('all');
   const [templates, setTemplates] = useState([])
   let timer = useRef(null);
+  let timerDate = useRef(null);
   const [selTemplate, setSelTemplate] = useState([])
   const [search, setSearch] = useState('')
   let selChatsLive = useRef({});
@@ -48,12 +49,19 @@ function Chats() {
     getChats(null)
     window?.frappe?.socketio.init(9000);
     window?.frappe?.socketio.socket.on("send_message", recvMessage);
+    addtimerDate()
     // window?.frappe?.socketio.socket.on("send_chat", recvChat);
     setInterval(() => {
-      updateTime(5)
       // recvMessage(`{\"mobile_number\": \"MN-00041042\", \"brand\": \"JitoDaily\", \"conversation\": \"CONV-1656600076990\", \"state\": \"error_menu\", \"message_id\": \"792951\", \"sender\": \"0\", \"message_type\": \"0\", \"content\": \"Hi\", \"timestamp\": \"1660645221\\n\", \"live\": 0}`)
-    }, 1000)
+    }, 500)
   }, []);
+
+  const addtimerDate = () => {
+    // clearInterval(timerDate.current)
+    timerDate.current = setInterval(() => {
+      updateTime()
+    }, 1000)
+  }
 
 
   const getChats = async (mobileNumber) => {
@@ -84,6 +92,7 @@ function Chats() {
   const recvMessage = (msg) => {
     let data = JSON.parse(msg);
     if (data && data.content) {
+      clearInterval(timerDate.current)
       data.content = data.content ? decodeURIComponent(data.content) : data.content;
 
       // check New User
@@ -120,6 +129,7 @@ function Chats() {
             let timestamp = parseInt(newData?.last_seen) * 1000 || 0;
             let _tab_time = timestamp ? time_ago(timestamp) : '';
             $(`#${data.mobile_number} .message-time`).text(_tab_time);
+            $(`#${data.mobile_number} .message-time`).attr("timestamp", timestamp);
             $(`#${data.mobile_number} .message-count`).text(newData?.messages?.length);
             $(`#${data.mobile_number} .message-head`).html(`${_live} ${_tab_identifier}`);
             $(`#${data.mobile_number} .message-text`).html(_tab_msg);
@@ -132,6 +142,7 @@ function Chats() {
           }
         }
       }
+      addtimerDate()
     }
   }
 
@@ -450,11 +461,9 @@ function Chats() {
     $('.tab-time').toArray().forEach(e => {
       let tab_time = $(e);
       let timestamp = parseInt(tab_time.attr('timestamp'));
-      let time_str_new = new Date(timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
       if (timestamp) {
         let time_str = time_ago(timestamp);
         tab_time.text(time_str);
-        tab_time.attr('title', time_str);
       }
     });
   }
@@ -595,7 +604,7 @@ function Chats() {
                     {isImg[1] ? <><div className="message-text" style={{ display: 'inline' }} dangerouslySetInnerHTML={{ __html: isImg[0] }} /> <img width={15} src={isImg[1]} alt="" /></> : <div className="message-text" dangerouslySetInnerHTML={{ __html: _tab_msg }} />}
                   </div>
                   <div className="message-count"> {chats.messages?.length} </div>
-                  <span className="time text-muted small message-time tab-time text-overflow" timestamp={timestamp} title={_tab_time}>{_tab_time}</span>
+                  <span className="time text-muted small message-time tab-time text-overflow" timestamp={timestamp}>{_tab_time}</span>
                 </div>
               }
             }
@@ -618,7 +627,7 @@ function Chats() {
             <div className="chatMenu">
               <div className="load-messages" data-toggle="tooltip" title="Load Previous Messages" onClick={loadPrevConversation}><i className="fa fa-refresh" aria-hidden="true"></i></div>
               {messages.map((item, key) => {
-                let state = String(item.state || '')
+                let state = String(selChats.state || '')
                 let color = state.includes('_success') ? '#16c78452' : state.includes('_failed') ? '#d0353e52' : 'white';
                 let conversation_id = item.name
                 let date_str = new Date(item.timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
