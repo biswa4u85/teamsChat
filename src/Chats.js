@@ -53,7 +53,7 @@ function Chats() {
     // window?.frappe?.socketio.socket.on("send_chat", recvChat);
     setInterval(() => {
       // recvMessage(`{\"mobile_number\": \"MN-00041042\", \"brand\": \"JitoDaily\", \"conversation\": \"CONV-1656600076990\", \"state\": \"error_menu\", \"message_id\": \"792951\", \"sender\": \"0\", \"message_type\": \"0\", \"content\": \"Hi\", \"timestamp\": \"1660645221\\n\", \"live\": 0}`)
-    }, 500)
+    }, 1000)
   }, []);
 
   const addtimerDate = () => {
@@ -182,8 +182,10 @@ function Chats() {
     brandWiseChats.current = tempOldData
     randerBrands(brand, null)
     if (!brand && data && data[0] && brandWiseChats.current[selBrand.current]) {
-      let sortCurrentChats = moveObjectElement(data[0].name, '', JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current])));
-      let sortable = Object.values(sortCurrentChats)
+      let currentChats = JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current]))
+      let sortable = Object.values(currentChats)
+      // let sortCurrentChats = moveObjectElement(data[0].name, '', JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current])));
+      // let sortable = Object.values(sortCurrentChats)
       sortable = sortable.sort(function (a, b) {
         return new Date(b.last_seen) - new Date(a.last_seen);
       });
