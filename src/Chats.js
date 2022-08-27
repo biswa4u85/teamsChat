@@ -114,8 +114,8 @@ function Chats() {
         let newData = JSON.parse(JSON.stringify(brandWiseChats.current[data.brand][data.mobile_number]))
         if (newData) {
           newData.messages.push(data)
-          // newData.last_seen = data.timestamp;
-          newData.last_seen = Math.floor(Date.now() / 1000)
+          newData.last_seen = data.timestamp;
+          // newData.last_seen = Math.floor(Date.now() / 1000)
           newData.live = data.live
           newData.state = data.state;
           newData.last_msg = data;
@@ -182,14 +182,16 @@ function Chats() {
     brandWiseChats.current = tempOldData
     randerBrands(brand, null)
     if (!brand && data && data[0] && brandWiseChats.current[selBrand.current]) {
-      let currentChats = JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current]))
-      let sortable = Object.values(currentChats)
+      // let currentChats = JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current]))
+      // let sortable = Object.values(currentChats)
       // let sortCurrentChats = moveObjectElement(data[0].name, '', JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current])));
       // let sortable = Object.values(sortCurrentChats)
-      sortable = sortable.sort(function (a, b) {
-        return new Date(b.last_seen) - new Date(a.last_seen);
-      });
-      setCurrentChats(sortable)
+      // sortable = sortable.sort(function (a, b) {
+      //   return new Date(b.last_seen) - new Date(a.last_seen);
+      // });
+      // console.log(sortable)
+      // setCurrentChats(sortable)
+      selectBrand(selBrand.current)
     }
     filterChats()
   }
