@@ -187,6 +187,7 @@ function Chats() {
       sortable = sortable.sort(function (a, b) {
         return new Date(b.last_seen) - new Date(a.last_seen);
       });
+      console.log(sortable)
       setCurrentChats(JSON.parse(JSON.stringify(sortable)))
     }
     filterChats()
