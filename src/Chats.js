@@ -46,6 +46,11 @@ function Chats() {
   const [live, setLive] = useState(false)
 
   useEffect(() => {
+
+    if (window?.frappe?.csrf_token == 'None') {
+      window.location.replace(`${window.location.origin}/login`)
+    }
+
     getChats(null)
     window?.frappe?.socketio.init(9000);
     window?.frappe?.socketio.socket.on("send_message", recvMessage);
@@ -182,6 +187,7 @@ function Chats() {
     brandWiseChats.current = tempOldData
     randerBrands(brand, null)
     if (!brand && data && data[0] && brandWiseChats.current[selBrand.current]) {
+      clearInterval(timerDate.current)
       let currentChats = JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current]))
       let sortable = Object.values(currentChats)
       sortable = sortable.sort(function (a, b) {
@@ -189,6 +195,7 @@ function Chats() {
       });
       console.log(sortable)
       setCurrentChats(JSON.parse(JSON.stringify(sortable)))
+      addtimerDate()
     }
     filterChats()
   }
