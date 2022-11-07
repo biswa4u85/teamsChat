@@ -4,6 +4,8 @@ import Config from "./Config";
 import { parse_msgs, time_ago, moveObjectElement } from './Utils'
 import { apiPostCall, fileUpload } from './services/site-apis'
 import Emoji from './Emoji'
+import { useReactMediaRecorder } from "react-media-recorder";
+
 
 const recentTabOptions = [
   { value: 'all', label: 'ALL' },
@@ -44,6 +46,39 @@ function Chats() {
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
   const [live, setLive] = useState(false)
+  const { startRecording, stopRecording, pauseRecording, resumeRecording, status, mediaBlobUrl, previewStream } = useReactMediaRecorder(
+    {
+      audio: true,
+      blobPropertyBag: { type: "audio/mp3" },
+    }
+  );
+
+  useEffect(() => {
+    async function uploadVoice() {
+      if (selChats) {
+        const audioBlob = await fetch(mediaBlobUrl).then((r) => r.blob());
+        const file = new File([audioBlob], "audiofile.mp3", {
+          type: "audio/mp3",
+        });
+        let data = await fileUpload(file, window?.frappe?.csrf_token)
+        if (data.message) {
+          let file = `${Config.apiURL}${data.message.file_url}`
+          let params = `chat_id=${selChats.telegram_id}&brand=${selChats.brand}&voice=${file}&message=%3Cb%3E${window?.frappe?.full_name}%3C%2Fb%3E%3A%0A%0A&cmd=mahadev.mahadev.func.send_message`;
+          let data1 = await apiPostCall('/', params, window?.frappe?.csrf_token)
+          if (data1) {
+            setNewMessage('')
+          }
+        }
+      }
+    }
+    if (mediaBlobUrl) {
+      uploadVoice();
+    }
+
+  }, [mediaBlobUrl]);
+
+
+  // console.log(previewStream)
 
   useEffect(() => {
 
@@ -55,14 +90,12 @@ function Chats() {
     window?.frappe?.socketio.init(9000);
     window?.frappe?.socketio.socket.on("send_message", recvMessage);
     addtimerDate()
-    // window?.frappe?.socketio.socket.on("send_chat", recvChat);
     setInterval(() => {
       // recvMessage(`{\"mobile_number\": \"MN-00041042\", \"brand\": \"JitoDaily\", \"conversation\": \"CONV-1656600076990\", \"state\": \"error_menu\", \"message_id\": \"792951\", \"sender\": \"0\", \"message_type\": \"0\", \"content\": \"Hi\", \"timestamp\": \"1660645221\\n\", \"live\": 0}`)
     }, 1000)
   }, []);
 
   const addtimerDate = () => {
-    // clearInterval(timerDate.current)
     timerDate.current = setInterval(() => {
       updateTime()
     }, 1000)
@@ -96,9 +129,9 @@ function Chats() {
 
   const recvMessage = (msg) => {
     let data = JSON.parse(msg);
-    if (data && data.content) {
+    if (data && data.message) {
       clearInterval(timerDate.current)
-      data.content = data.content ? decodeURIComponent(data.content) : data.content;
+      data.message = data.message ? decodeURIComponent(data.message) : data.message;
 
       // check New User
       if (data.mobile_number in tempMessagesIds.current === false) {
@@ -124,13 +157,13 @@ function Chats() {
           newData.live = data.live
           newData.state = data.state;
           newData.last_msg = data;
-          newData.liveStarted = (data.content).includes('Live Chat started') ? true : false
+          newData.liveStarted = (data.message).includes('Live Chat started') ? true : false
           brandWiseChats.current[data.brand][data.mobile_number] = newData
           if (data.brand == selBrand.current) {
             let _live = parseInt(newData.live) ? '<span style="color: red;">LIVE</span>' : '';
             let full_name = `${newData.first_name || ''} ${newData.last_name || ''}`.trim();
             let _tab_identifier = `${newData.mobile_number} ${newData.telegram_username ? '(@' + newData.telegram_username + ')' : ''} - ${full_name}`;
-            let _tab_msg = `${parseInt(newData?.last_msg?.sender) ? 'Bot' : 'User'}: ${newData?.last_msg?.content || 'New Chat'}`;
+            let _tab_msg = `${parseInt(newData?.last_msg?.sender) ? 'Bot' : 'User'}: ${newData?.last_msg?.message || 'New Chat'}`;
             let timestamp = parseInt(newData?.last_seen) * 1000 || 0;
             let _tab_time = timestamp ? time_ago(timestamp) : '';
             $(`#${data.mobile_number} .message-time`).text(_tab_time);
@@ -434,10 +467,22 @@ function Chats() {
 
   const uploadFile = async (event) => {
     if (selChats) {
+      let fileType = (event.target.files[0].type).split("/");
+      let fileFormat = fileType[0]
+      let fileName = 'document'
+      if (fileFormat === 'video') {
+        fileName = 'video'
+      }
+      if (fileFormat === 'image') {
+        fileName = 'photo'
+      }
+      // if (fileFormat === 'voice') {
+      //   fileName = 'voice'
+      // }
       let data = await fileUpload(event.target.files[0], window?.frappe?.csrf_token)
       if (data.message) {
         let file = `${Config.apiURL}${data.message.file_url}`
-        let params = `telegram_id=${selChats.telegram_id}&brand=${selChats.brand}&message=%3Cb%3E${window?.frappe?.full_name}%3C%2Fb%3E%3A%0AIMG:${file}%0A&cmd=mahadev.mahadev.func.send_message`;
+        let params = `chat_id=${selChats.telegram_id}&brand=${selChats.brand}&${fileName}=${file}&message=%3Cb%3E${window?.frappe?.full_name}%3C%2Fb%3E%3A%0A%0A&cmd=mahadev.mahadev.func.send_message`;
         let data1 = await apiPostCall('/', params, window?.frappe?.csrf_token)
         if (data1) {
           setNewMessage('')
@@ -449,7 +494,7 @@ function Chats() {
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (selChats && newMessage) {
-      let params = `telegram_id=${selChats.telegram_id}&brand=${selChats.brand}&message=%3Cb%3E${window?.frappe?.full_name}%3C%2Fb%3E%3A%0A${newMessage}%0A&cmd=mahadev.mahadev.func.send_message`;
+      let params = `chat_id=${selChats.telegram_id}&brand=${selChats.brand}&message=%3Cb%3E${window?.frappe?.full_name}%3C%2Fb%3E%3A%0A${newMessage}%0A&cmd=mahadev.mahadev.func.send_message`;
       let data = await apiPostCall('/', params, window?.frappe?.csrf_token)
       if (data) {
         setNewMessage('')
@@ -635,16 +680,29 @@ function Chats() {
             <div className="chatMenu">
               <div className="load-messages" data-toggle="tooltip" title="Load Previous Messages" onClick={loadPrevConversation}><i className="fa fa-refresh" aria-hidden="true"></i></div>
               {messages.map((item, key) => {
+                // console.log(item)
                 let state = String(selChats.state || '')
                 let color = state.includes('_success') ? '#16c78452' : state.includes('_failed') ? '#d0353e52' : 'white';
                 let conversation_id = item.name
                 let date_str = new Date(item.timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
-                let isImg = item.content.split(':\nIMG:')
                 return <div key={key} className={"row no-gutters" + conversation_id} style={{ backgroundColor: color }}>
                   <div className={parseInt(item.sender) ? 'col-md-7 offset-md-5' : 'col-md-7 '}>
-                    <div className={parseInt(item.sender) ? 'chat-bubble chat-bubble--right' : 'chat-bubble chat-bubble--left'}>
-                      {isImg[1] ? <><div style={{ display: 'inline' }} dangerouslySetInnerHTML={{ __html: isImg[0] }} /> <img width={40} src={isImg[1]} alt="" /></> : <div dangerouslySetInnerHTML={{ __html: item.content }} />}
-                      <h5><i className="fa fa-clock-o"></i> {date_str} </h5>
+                    <div className={(item.message_type == 0 ? 'chat-bubble ' : 'chat-bubble bg-none ') + (parseInt(item.sender) ? 'chat-bubble--right' : 'chat-bubble--left')}>
+                      {item.message_type == 0 && (<div dangerouslySetInnerHTML={{ __html: item.content }} />)}
+                      {item.message_type != 0 && (<div className="heading"><span dangerouslySetInnerHTML={{ __html: item.content ? item.content : ' ' }} /><span><i className="fa fa-clock-o"></i> {date_str}</span></div>)}
+                      {item.message_type == 2 && (<img width="100%" src={(item.sender == 0 ? Config.apiURL : '') + item.media_path} />)}
+                      {item.message_type == 3 && (<video width="100%" controls>
+                        <source src={(item.sender == 0 ? Config.apiURL : '') + item.media_path} type="video/mp4" />
+                        <source src={(item.sender == 0 ? Config.apiURL : '') + item.media_path} type="video/ogg" />
+                        Your browser does not support HTML video.
+                      </video>)}
+                      {item.message_type == 4 && (<video width="100%" height="50" controls>
+                        <source src={(item.sender == 0 ? Config.apiURL : '') + item.media_path} type="audio/mp3" />
+                        <source src={(item.sender == 0 ? Config.apiURL : '') + item.media_path} type="audio/ogg" />
+                        Your browser does not support HTML video.
+                      </video>)}
+                      {item.message_type == 5 && (<a style={{ backgroundColor: '#ccc', display: 'block', padding: 4, color: '#fff' }} target={'_blank'} href={(item.sender == 0 ? Config.apiURL : '') + item.media_path}>PDF DOWNLOAD</a>)}
+                      {item.message_type == 0 && (<h5><i className="fa fa-clock-o"></i> {date_str} </h5>)}
                     </div>
                   </div>
                 </div>
@@ -667,7 +725,18 @@ function Chats() {
                     {selTemplate.length > 0 && (<div className="autocomplete-items">
                       {selTemplate.map((item, key) => <div key={key} onClick={() => addTemplate(item)}>{item.name}</div>)}
                     </div>)}
-                    <i className="fa fa-microphone" aria-hidden="true"></i>
+                    {(status == 'idle' || status == 'stopped') && (<i className="fa fa-microphone" onClick={startRecording}></i>)}
+                    {!(status == 'idle' || status == 'stopped') && (<i className="fa fa-play-circle" style={{ color: 'green' }} onClick={stopRecording}></i>)}
+                    {!(status == 'idle' || status == 'stopped') && (<div className="autocomplete-audio">
+                      {/* {status} */}
+                      <div className="audioBox">
+                        <i className="fa fa-trash" onClick={stopRecording} aria-hidden="true"></i>
+                        <div>{'2:30'}</div>
+                        {/* <video src={mediaBlobUrl} controls autoPlay loop /> */}
+                        {status != 'paused' && (<i className="fa fa-pause" style={{ color: '#ff0000' }} onClick={pauseRecording} aria-hidden="true"></i>)}
+                        {status == 'paused' && (<i className="fa fa-microphone" style={{ color: '#ff0000' }} onClick={resumeRecording} aria-hidden="true"></i>)}
+                      </div>
+                    </div>)}
                   </div>
                 </div>
               </form>
@@ -680,3 +749,7 @@ function Chats() {
 }
 
 export default Chats;
+
+{/* <button onClick={startRecording}>Start</button>
+                        <button onClick={stopRecording}>Stop</button>
+                        <video src={mediaBlobUrl} controls autoPlay loop /> */}

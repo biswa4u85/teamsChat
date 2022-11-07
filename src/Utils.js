@@ -6,14 +6,22 @@ export function parse_msgs(msgs) {
     let result = [];
     messages.forEach(e => {
         let msg = e.split(';');
-        if (msg.length >= 5)
+        if (msg.length >= 6) {
+            result.push({
+                'message_id': msg[0],
+                'sender': msg[1],
+                'message_type': msg[2],
+                'content': decodeURIComponent(msg[3]),
+                'media_path': msg[4],
+                'timestamp': msg[5],
+            });
+        } else if (msg.length >= 5)
             result.push({
                 'message_id': msg[0],
                 'sender': msg[1],
                 'message_type': msg[2],
                 'content': decodeURIComponent(msg[3]),
                 'timestamp': msg[4],
-
             });
     });
     return result;

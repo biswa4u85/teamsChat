@@ -242,6 +242,7 @@ hr {
   width: 60%;
 }
 
+
 .chat-bubble {
   padding: 10px 14px;
   background: #eee;
@@ -251,6 +252,23 @@ hr {
   font-weight: normal;
   color: #000;
   animation: fadeIn 1s ease-in;
+}
+
+.chat-bubble.bg-none {
+  background: transparent;
+}
+
+.chat-bubble .heading {
+  background: #eee;
+  display: flex;
+  justify-content: space-between;
+  padding: 5px;
+  border-top-left-radius: 7px;
+  border-top-right-radius: 7px;
+}
+
+.offset-md-5 .chat-bubble .heading {
+  background: #74b9ff;
 }
 
 .chat-bubble h5 {
@@ -285,6 +303,12 @@ hr {
   margin-right: -20px;
 }
 
+.chat-bubble.bg-none.chat-bubble--left:after,
+.chat-bubble.bg-none.chat-bubble--right:after {
+  border-left-color: transparent;
+  border-right-color: transparent;
+}
+
 @keyframes fadeIn {
   0% {
     opacity: 0;
@@ -297,6 +321,11 @@ hr {
 
 .offset-md-5 .chat-bubble {
   background: #74b9ff;
+  color: #fff;
+}
+
+.offset-md-5 .chat-bubble.bg-none {
+  background: transparent;
   color: #fff;
 }
 
@@ -444,6 +473,23 @@ hr {
   position: relative;
 }
 
+.autocomplete-audio {
+  position: absolute;
+  background: #eee;
+  z-index: 9999;
+  bottom: 9px;
+  text-align: right;
+  right: 0;
+  left: 0;
+  width: 94%;
+  height: 40px;
+}
+
+.audioBox {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 5px;
+}
 
 .autocomplete-items {
   position: absolute;
