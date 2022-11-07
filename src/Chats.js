@@ -680,16 +680,16 @@ function Chats() {
             <div className="chatMenu">
               <div className="load-messages" data-toggle="tooltip" title="Load Previous Messages" onClick={loadPrevConversation}><i className="fa fa-refresh" aria-hidden="true"></i></div>
               {messages.map((item, key) => {
-                // console.log(item)
+                console.log(item)
                 let state = String(selChats.state || '')
                 let color = state.includes('_success') ? '#16c78452' : state.includes('_failed') ? '#d0353e52' : 'white';
                 let conversation_id = item.name
                 let date_str = new Date(item.timestamp * 1000).toLocaleString('en-IN', { hour: 'numeric', minute: 'numeric', hour12: true })
                 return <div key={key} className={"row no-gutters" + conversation_id} style={{ backgroundColor: color }}>
                   <div className={parseInt(item.sender) ? 'col-md-7 offset-md-5' : 'col-md-7 '}>
-                    <div className={(item.message_type == 0 ? 'chat-bubble ' : 'chat-bubble bg-none ') + (parseInt(item.sender) ? 'chat-bubble--right' : 'chat-bubble--left')}>
-                      {item.message_type == 0 && (<div dangerouslySetInnerHTML={{ __html: item.content }} />)}
-                      {item.message_type != 0 && (<div className="heading"><span dangerouslySetInnerHTML={{ __html: item.content ? item.content : ' ' }} /><span><i className="fa fa-clock-o"></i> {date_str}</span></div>)}
+                    <div className={((item.message_type == 0 || item.message_type == 1) ? 'chat-bubble ' : 'chat-bubble bg-none ') + (parseInt(item.sender) ? 'chat-bubble--right' : 'chat-bubble--left')}>
+                      {(item.message_type == 0 || item.message_type == 1) && (<div className={item.message_type == 1 ? "boxShadow" : "box"} dangerouslySetInnerHTML={{ __html: item.content }} />)}
+                      {!(item.message_type == 0 || item.message_type == 1) && (<div className="heading"><span dangerouslySetInnerHTML={{ __html: item.content ? item.content : ' ' }} /><span><i className="fa fa-clock-o"></i> {date_str}</span></div>)}
                       {item.message_type == 2 && (<img width="100%" src={(item.sender == 0 ? Config.apiURL : '') + item.media_path} />)}
                       {item.message_type == 3 && (<video width="100%" controls>
                         <source src={(item.sender == 0 ? Config.apiURL : '') + item.media_path} type="video/mp4" />
@@ -702,7 +702,7 @@ function Chats() {
                         Your browser does not support HTML video.
                       </video>)}
                       {item.message_type == 5 && (<a style={{ backgroundColor: '#ccc', display: 'block', padding: 4, color: '#fff' }} target={'_blank'} href={(item.sender == 0 ? Config.apiURL : '') + item.media_path}>PDF DOWNLOAD</a>)}
-                      {item.message_type == 0 && (<h5><i className="fa fa-clock-o"></i> {date_str} </h5>)}
+                      {(item.message_type == 0 || item.message_type == 1) && (<h5><i className="fa fa-clock-o"></i> {date_str} </h5>)}
                     </div>
                   </div>
                 </div>
@@ -749,7 +749,3 @@ function Chats() {
 }
 
 export default Chats;
-
-{/* <button onClick={startRecording}>Start</button>
-                        <button onClick={stopRecording}>Stop</button>
-                        <video src={mediaBlobUrl} controls autoPlay loop /> */}
