@@ -1,10 +1,10 @@
 import React, { useRef, useState, useEffect } from "react";
+import { useReactMediaRecorder } from "react-media-recorder";
 import $ from 'jquery';
 import Config from "./Config";
 import { parse_msgs, time_ago, moveObjectElement } from './Utils'
 import { apiPostCall, fileUpload } from './services/site-apis'
 import Emoji from './Emoji'
-import { useReactMediaRecorder } from "react-media-recorder";
 
 
 const recentTabOptions = [
@@ -49,7 +49,7 @@ function Chats() {
   const { startRecording, stopRecording, pauseRecording, resumeRecording, status, mediaBlobUrl, previewStream } = useReactMediaRecorder(
     {
       audio: true,
-      blobPropertyBag: { type: "audio/mp3" },
+      blobPropertyBag: { type: "audio/mpeg" },
     }
   );
 
@@ -58,7 +58,7 @@ function Chats() {
       if (selChats) {
         const audioBlob = await fetch(mediaBlobUrl).then((r) => r.blob());
         const file = new File([audioBlob], "audiofile.mp3", {
-          type: "audio/mp3",
+          type: "audio/mpeg",
         });
         let data = await fileUpload(file, window?.frappe?.csrf_token)
         if (data.message) {
@@ -91,7 +91,7 @@ function Chats() {
     window?.frappe?.socketio.socket.on("send_message", recvMessage);
     addtimerDate()
     setInterval(() => {
-      // recvMessage(`{\"mobile_number\": \"MN-00041042\", \"brand\": \"JitoDaily\", \"conversation\": \"CONV-1656600076990\", \"state\": \"error_menu\", \"message_id\": \"792951\", \"sender\": \"0\", \"message_type\": \"0\", \"content\": \"Hi\", \"timestamp\": \"1660645221\\n\", \"live\": 0}`)
+      // recvMessage(`{\"mobile_number\": \"MN-0001947\", \"brand\": \"JitoDaily\", \"conversation\": \"CONV-1667912821959\", \"state\": \"\", \"message_id\": 1205937, \"sender\": 1, \"message_type\": 0, \"message\": \"<b>Biswa Sahoo</b>:\\nhi\\n\", \"media\": [\"\"], \"timestamp\": \"1667917183\", \"live\": 0} `)
     }, 1000)
   }, []);
 
@@ -129,9 +129,10 @@ function Chats() {
 
   const recvMessage = (msg) => {
     let data = JSON.parse(msg);
-    if (data && data.message) {
+    if (data && (data.message || data.media)) {
       clearInterval(timerDate.current)
-      data.message = data.message ? decodeURIComponent(data.message) : data.message;
+      data.message = data?.message ? decodeURIComponent(data.message) : ' ';
+      data.media = data?.media ? decodeURIComponent(data.media) : ' ';
 
       // check New User
       if (data.mobile_number in tempMessagesIds.current === false) {
@@ -168,7 +169,7 @@ function Chats() {
             let _tab_time = timestamp ? time_ago(timestamp) : '';
             $(`#${data.mobile_number} .message-time`).text(_tab_time);
             $(`#${data.mobile_number} .message-time`).attr("timestamp", timestamp);
-            $(`#${data.mobile_number} .message-count`).text(newData?.messages?.length);
+            $(`#${data.mobile_number} .message-count`).text(newData?.message?.length);
             $(`#${data.mobile_number} .message-head`).html(`${_live} ${_tab_identifier}`);
             $(`#${data.mobile_number} .message-text`).html(_tab_msg);
             $(`#${data.mobile_number}`).prependTo($("#chatBox"));
@@ -647,7 +648,7 @@ function Chats() {
                 let full_name = `${chats.first_name || ''} ${chats.last_name || ''}`.trim();
                 let _tab_identifier = `${chats.mobile_number} ${chats.telegram_username ? '(@' + chats.telegram_username + ')' : ''} - ${full_name}`;
                 let timestamp = parseInt(chats?.last_seen) * 1000 || 0;
-                let _tab_msg = `${parseInt(chats?.last_msg?.sender) ? 'Bot' : 'User'}: ${chats?.last_msg?.content || 'New Chat'}`;
+                let _tab_msg = `${parseInt(chats?.last_msg?.sender) ? 'Bot' : 'User'}: ${chats?.last_msg?.message || 'New Chat'}`;
                 let _tab_time = timestamp ? time_ago(timestamp) : '';
                 let isImg = _tab_msg.split(':\nIMG:')
                 return <div key={key} id={chats.name} className={"friend-drawer friend-drawer--onhover "} onClick={() => selectChat(chats)}>
@@ -688,20 +689,20 @@ function Chats() {
                 return <div key={key} className={"row no-gutters" + conversation_id} style={{ backgroundColor: color }}>
                   <div className={parseInt(item.sender) ? 'col-md-7 offset-md-5' : 'col-md-7 '}>
                     <div className={((item.message_type == 0 || item.message_type == 1) ? 'chat-bubble ' : 'chat-bubble bg-none ') + (parseInt(item.sender) ? 'chat-bubble--right' : 'chat-bubble--left')}>
-                      {(item.message_type == 0 || item.message_type == 1) && (<div className={item.message_type == 1 ? "boxShadow" : "box"} dangerouslySetInnerHTML={{ __html: item.content }} />)}
-                      {!(item.message_type == 0 || item.message_type == 1) && (<div className="heading"><span dangerouslySetInnerHTML={{ __html: item.content ? item.content : ' ' }} /><span><i className="fa fa-clock-o"></i> {date_str}</span></div>)}
-                      {item.message_type == 2 && (<img width="100%" src={(item.sender == 0 ? Config.apiURL : '') + item.media_path} />)}
+                      {(item.message_type == 0 || item.message_type == 1) && (<div className={item.message_type == 1 ? "boxShadow" : "box"} dangerouslySetInnerHTML={{ __html: item.message }} />)}
+                      {!(item.message_type == 0 || item.message_type == 1) && (<div className="heading"><span dangerouslySetInnerHTML={{ __html: item.message ? item.message : ' ' }} /><span><i className="fa fa-clock-o"></i> {date_str}</span></div>)}
+                      {item.message_type == 2 && (<img width="100%" src={(item.sender == 0 ? Config.apiURL : '') + item.media} />)}
                       {item.message_type == 3 && (<video width="100%" controls>
-                        <source src={(item.sender == 0 ? Config.apiURL : '') + item.media_path} type="video/mp4" />
-                        <source src={(item.sender == 0 ? Config.apiURL : '') + item.media_path} type="video/ogg" />
+                        <source src={(item.sender == 0 ? Config.apiURL : '') + item.media} type="video/mp4" />
+                        <source src={(item.sender == 0 ? Config.apiURL : '') + item.media} type="video/ogg" />
                         Your browser does not support HTML video.
                       </video>)}
                       {item.message_type == 4 && (<video width="100%" height="50" controls>
-                        <source src={(item.sender == 0 ? Config.apiURL : '') + item.media_path} type="audio/mp3" />
-                        <source src={(item.sender == 0 ? Config.apiURL : '') + item.media_path} type="audio/ogg" />
+                        <source src={(item.sender == 0 ? Config.apiURL : '') + item.media} type="audio/mp3" />
+                        <source src={(item.sender == 0 ? Config.apiURL : '') + item.media} type="audio/ogg" />
                         Your browser does not support HTML video.
                       </video>)}
-                      {item.message_type == 5 && (<a style={{ backgroundColor: '#ccc', display: 'block', padding: 4, color: '#fff' }} target={'_blank'} href={(item.sender == 0 ? Config.apiURL : '') + item.media_path}>PDF DOWNLOAD</a>)}
+                      {item.message_type == 5 && (<a style={{ backgroundColor: '#ccc', display: 'block', padding: 4, color: '#fff' }} target={'_blank'} href={(item.sender == 0 ? Config.apiURL : '') + item.media}>PDF DOWNLOAD</a>)}
                       {(item.message_type == 0 || item.message_type == 1) && (<h5><i className="fa fa-clock-o"></i> {date_str} </h5>)}
                     </div>
                   </div>

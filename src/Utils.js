@@ -11,8 +11,8 @@ export function parse_msgs(msgs) {
                 'message_id': msg[0],
                 'sender': msg[1],
                 'message_type': msg[2],
-                'content': decodeURIComponent(msg[3]),
-                'media_path': msg[4],
+                'message': decodeURIComponent(msg[3]),
+                'media': msg[4],
                 'timestamp': msg[5],
             });
         } else if (msg.length >= 5)
@@ -20,7 +20,7 @@ export function parse_msgs(msgs) {
                 'message_id': msg[0],
                 'sender': msg[1],
                 'message_type': msg[2],
-                'content': decodeURIComponent(msg[3]),
+                'message': decodeURIComponent(msg[3]),
                 'timestamp': msg[4],
             });
     });
