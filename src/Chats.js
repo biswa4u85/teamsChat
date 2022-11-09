@@ -692,7 +692,7 @@ function Chats() {
               <i onClick={() => {
                 let selUser = users.find((item) => item.name = user)
                 if (selUser) {
-                  window.open(`${Config.apiURL}/api/method/mahadev.mahadev.doctype.sports_website.sports_website.get_statement?site=${selUser.sports_website}&username=${selUser.username}&statement_type=2&days=3`, '_blank')
+                  window.open(`${window.location.origin}/api/method/mahadev.mahadev.doctype.sports_website.sports_website.get_statement?site=${selUser.sports_website}&username=${selUser.username}&statement_type=2&days=3`, '_blank')
                 }
               }} className="fa fa-download" aria-hidden="true"></i>
             </div>)}
