@@ -6,7 +6,6 @@ import { parse_msgs, time_ago, moveObjectElement } from './Utils'
 import { apiPostCall, fileUpload } from './services/site-apis'
 import Emoji from './Emoji'
 
-
 const recentTabOptions = [
   { value: 'all', label: 'ALL' },
   { value: '1', label: 'Day' },
@@ -36,6 +35,8 @@ function Chats() {
   const [stateVal, setStateVal] = useState(stateTabOptions[0])
   let selChatType = useRef('all');
   const [templates, setTemplates] = useState([])
+  const [users, setUsers] = useState([])
+  const [user, setUser] = useState(null)
   let timer = useRef(null);
   let timerDate = useRef(null);
   const [selTemplate, setSelTemplate] = useState([])
@@ -77,8 +78,7 @@ function Chats() {
 
   }, [mediaBlobUrl]);
 
-
-  // console.log(previewStream)
+  // console.log(users)
 
   useEffect(() => {
 
@@ -86,7 +86,7 @@ function Chats() {
       window.location.replace(`${window.location.origin}/login`)
     }
 
-    getChats(null)
+    setTimeout(() => getChats(null), 100)
     window?.frappe?.socketio.init(9000);
     window?.frappe?.socketio.socket.on("send_message", recvMessage);
     addtimerDate()
@@ -114,7 +114,7 @@ function Chats() {
   }
 
   const loadPrevConversation = async () => {
-    if (selChats) {
+    if (selChats && selChats.previous_conversation) {
       let params = `doctype=Conversation+Log&name=${selChats.previous_conversation}&cmd=frappe.client.get`;
       let data = await apiPostCall('/', params, window?.frappe?.csrf_token)
       if (data.message) {
@@ -123,6 +123,9 @@ function Chats() {
         let newMessages = [...data.message.messages, ...tempMessages]
         messagesLive.current = newMessages
         setMessages(newMessages)
+        let tempSelChats = selChats
+        tempSelChats.previous_conversation = data.message.previous_conversation
+        setSelChats(tempSelChats)
       }
     }
   }
@@ -205,7 +208,8 @@ function Chats() {
 
     // Sort Array First
     data = data.sort(function (a, b) {
-      return new Date(b.last_seen) - new Date(a.last_seen);
+      // return new Date(b.last_seen) - new Date(a.last_seen);
+      return b.last_seen - a.last_seen;
     });
 
     // Group By Brand
@@ -225,9 +229,9 @@ function Chats() {
       let currentChats = JSON.parse(JSON.stringify(brandWiseChats.current[selBrand.current]))
       let sortable = Object.values(currentChats)
       sortable = sortable.sort(function (a, b) {
-        return new Date(b.last_seen) - new Date(a.last_seen);
+        // return new Date(b.last_seen) - new Date(a.last_seen);
+        return b.last_seen - a.last_seen;
       });
-      // console.log(sortable)
       setCurrentChats(JSON.parse(JSON.stringify(sortable)))
       addtimerDate()
     }
@@ -274,18 +278,21 @@ function Chats() {
   }
 
   const selectBrand = (data) => {
+    clearInterval(timerDate.current)
     selBrand.current = data
     let currentChats = JSON.parse(JSON.stringify(brandWiseChats.current[data]))
     let sortable = Object.values(currentChats)
     sortable = sortable.sort(function (a, b) {
-      return new Date(b.last_seen) - new Date(a.last_seen);
+      // return new Date(b.last_seen) - new Date(a.last_seen);
+      return b.last_seen - a.last_seen;
     });
-    setCurrentChats(sortable)
+    setCurrentChats(JSON.parse(JSON.stringify(sortable)))
     setSelTemplate([])
     getTemplate(data)
     messagesLive.current = []
     setMessages([])
     filterChats()
+    addtimerDate()
   }
 
   const getTemplate = async (name) => {
@@ -293,6 +300,15 @@ function Chats() {
     let data = await apiPostCall('/', params, window?.frappe?.csrf_token)
     if (data.message) {
       setTemplates(data.message)
+    }
+  }
+
+  const getAllusers = async (item) => {
+    let params = `doctype=Sports+Website+User&filters=%7B%22mobile_number%22%3A%22${item.name}%22%7D&limit_page_length=None&fields=%5B%22name%22%2C%22username%22%2C%22sports_website%22%5D&cmd=frappe.client.get_list`;
+    let data = await apiPostCall('/', params, window?.frappe?.csrf_token)
+    if (data.message) {
+      setUsers(data.message)
+      setUser(null)
     }
   }
 
@@ -413,7 +429,7 @@ function Chats() {
 
   }
 
-  const selectChat = (item) => {
+  const selectChat = async (item) => {
     let data = JSON.parse(JSON.stringify(brandWiseChats.current[item.brand][item.name]))
     $('.leftMenu').each(function () {
       $(this).find('.friend-drawer').removeClass('tab-focus');
@@ -426,6 +442,8 @@ function Chats() {
     setMessages(data.messages)
     setNewMessage('')
     setTimeout(() => chatMenuRef.current.scrollIntoView({ behavior: "smooth" }), 100)
+    setUsers([])
+    getAllusers(item)
   }
 
   const addEmoji = (data) => {
@@ -477,9 +495,6 @@ function Chats() {
       if (fileFormat === 'image') {
         fileName = 'photo'
       }
-      // if (fileFormat === 'voice') {
-      //   fileName = 'voice'
-      // }
       let data = await fileUpload(event.target.files[0], window?.frappe?.csrf_token)
       if (data.message) {
         let file = `${Config.apiURL}${data.message.file_url}`
@@ -669,6 +684,18 @@ function Chats() {
         <div className="col-md-8">
           <div className="settings-tray">
             {/* {selChats && (<div className="closeChart"><i onClick={closeCurrentChart} className="fa fa-times" aria-hidden="true"></i></div>)} */}
+            {selChats && (<div className="closeChart">
+              <select name="user" id="user" onChange={(obj) => setUser(obj.target.value)}>
+                <option value={null}>Select User</option>
+                {users.map((user, key) => <option key={key} value={user.name}>{user.username}</option>)}
+              </select>
+              <i onClick={() => {
+                let selUser = users.find((item) => item.name = user)
+                if (selUser) {
+                  window.open(`${Config.apiURL}/api/method/mahadev.mahadev.doctype.sports_website.sports_website.get_statement?site=${selUser.sports_website}&username=${selUser.username}&statement_type=2&days=3`, '_blank')
+                }
+              }} className="fa fa-download" aria-hidden="true"></i>
+            </div>)}
             <div className="friend-drawer no-gutters friend-drawer--grey">
               <img className="profile-image" src={`https://ui-avatars.com/api/?name=${selChats?.first_name + ' ' + selChats?.last_name}`} alt="" />
               <div className="text">
@@ -681,7 +708,7 @@ function Chats() {
             <div className="chatMenu">
               <div className="load-messages" data-toggle="tooltip" title="Load Previous Messages" onClick={loadPrevConversation}><i className="fa fa-refresh" aria-hidden="true"></i></div>
               {messages.map((item, key) => {
-                console.log(item)
+                // console.log(item)
                 let state = String(selChats.state || '')
                 let color = state.includes('_success') ? '#16c78452' : state.includes('_failed') ? '#d0353e52' : 'white';
                 let conversation_id = item.name
