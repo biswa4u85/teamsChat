@@ -777,3 +777,8 @@ input[type=checkbox] {
   background-position: 50%;
   border: solid 1px #ccc;
 }
+.banDate{
+  color: #fff;
+  margin-right: 10px;
+  cursor: pointer;
+}

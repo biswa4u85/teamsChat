@@ -1,6 +1,7 @@
 import React, { useRef, useState, useEffect } from "react";
 import { useReactMediaRecorder } from "react-media-recorder";
 import $ from 'jquery';
+import moment from 'moment';
 import Config from "./Config";
 import { parse_msgs, time_ago, moveObjectElement } from './Utils'
 import { apiPostCall, fileUpload } from './services/site-apis'
@@ -36,6 +37,7 @@ function Chats() {
   let selChatType = useRef('all');
   const [templates, setTemplates] = useState([])
   const [users, setUsers] = useState([])
+  const [blockDetails, setBlockDetails] = useState(null)
   const [user, setUser] = useState(null)
   let timer = useRef(null);
   let timerDate = useRef(null);
@@ -47,6 +49,7 @@ function Chats() {
   const [messages, setMessages] = useState([])
   const [newMessage, setNewMessage] = useState('')
   const [live, setLive] = useState(false)
+  const [checkSubmit, setCheckSubmit] = useState(true)
   const { startRecording, stopRecording, pauseRecording, resumeRecording, status, mediaBlobUrl, previewStream } = useReactMediaRecorder(
     {
       audio: true,
@@ -78,15 +81,13 @@ function Chats() {
 
   }, [mediaBlobUrl]);
 
-  // console.log(users)
-
   useEffect(() => {
 
     if (window?.frappe?.csrf_token == 'None') {
       window.location.replace(`${window.location.origin}/login`)
     }
 
-    setTimeout(() => getChats(null), 100)
+    setTimeout(() => getChats(null), 50)
     window?.frappe?.socketio.init(9000);
     window?.frappe?.socketio.socket.on("send_message", recvMessage);
     addtimerDate()
@@ -304,6 +305,12 @@ function Chats() {
   }
 
   const getAllusers = async (item) => {
+    let paramsUserMobile = `doctype=Mobile+Number&filters=%7B%22name%22%3A%22${item.mobile_number}%22%7D&limit_page_length=None&fields=%5B%22name%22%2C%22blocked_until%22%2C%22total_lock_reason%22%5D&cmd=frappe.client.get_list`;
+    let dataUserMobile = await apiPostCall('/', paramsUserMobile, window?.frappe?.csrf_token)
+    if (dataUserMobile.message) {
+      setBlockDetails(dataUserMobile?.message ? dataUserMobile?.message[0] : null)
+    }
+
     let params = `doctype=Sports+Website+User&filters=%7B%22mobile_number%22%3A%22${item.name}%22%7D&limit_page_length=None&fields=%5B%22name%22%2C%22username%22%2C%22sports_website%22%5D&cmd=frappe.client.get_list`;
     let data = await apiPostCall('/', params, window?.frappe?.csrf_token)
     if (data.message) {
@@ -443,6 +450,7 @@ function Chats() {
     setNewMessage('')
     setTimeout(() => chatMenuRef.current.scrollIntoView({ behavior: "smooth" }), 100)
     setUsers([])
+    setBlockDetails(null)
     getAllusers(item)
   }
 
@@ -509,11 +517,13 @@ function Chats() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (selChats && newMessage) {
+    if (selChats && newMessage && checkSubmit) {
+      setCheckSubmit(false)
       let params = `chat_id=${selChats.telegram_id}&brand=${selChats.brand}&message=%3Cb%3E${window?.frappe?.full_name}%3C%2Fb%3E%3A%0A${newMessage}%0A&cmd=mahadev.mahadev.func.send_message`;
       let data = await apiPostCall('/', params, window?.frappe?.csrf_token)
       if (data) {
         setNewMessage('')
+        setCheckSubmit(true)
       }
     }
   }
@@ -685,6 +695,7 @@ function Chats() {
           <div className="settings-tray">
             {/* {selChats && (<div className="closeChart"><i onClick={closeCurrentChart} className="fa fa-times" aria-hidden="true"></i></div>)} */}
             {selChats && (<div className="closeChart">
+              {blockDetails?.blocked_until ? <span onClick={()=>window.open(`${window.location.origin}/app/mobile-number/${blockDetails.name}`, '_blank')} className="banDate"><i className="fa fa-ban" aria-hidden="true"></i> {moment(blockDetails?.blocked_until).format('YYYY-MM-DD HH:mm')}</span> : ''}
               <select name="user" id="user" onChange={(obj) => setUser(obj.target.value)}>
                 <option value={null}>Select User</option>
                 {users.map((user, key) => <option key={key} value={user.name}>{user.username}</option>)}
