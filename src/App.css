@@ -782,3 +782,7 @@ input[type=checkbox] {
   margin-right: 10px;
   cursor: pointer;
 }
+.audio-image{
+  width: 300px;
+  height: 40px;
+}

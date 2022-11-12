@@ -50,7 +50,7 @@ function Chats() {
   const [newMessage, setNewMessage] = useState('')
   const [live, setLive] = useState(false)
   const [checkSubmit, setCheckSubmit] = useState(true)
-  const { startRecording, stopRecording, pauseRecording, resumeRecording, status, mediaBlobUrl, previewStream } = useReactMediaRecorder(
+  const { startRecording, stopRecording, pauseRecording, resumeRecording, status, mediaBlobUrl, clearBlobUrl } = useReactMediaRecorder(
     {
       audio: true,
       blobPropertyBag: { type: "audio/mpeg" },
@@ -80,6 +80,8 @@ function Chats() {
     }
 
   }, [mediaBlobUrl]);
+
+
 
   useEffect(() => {
 
@@ -695,7 +697,7 @@ function Chats() {
           <div className="settings-tray">
             {/* {selChats && (<div className="closeChart"><i onClick={closeCurrentChart} className="fa fa-times" aria-hidden="true"></i></div>)} */}
             {selChats && (<div className="closeChart">
-              {blockDetails?.blocked_until ? <span onClick={()=>window.open(`${window.location.origin}/app/mobile-number/${blockDetails.name}`, '_blank')} className="banDate"><i className="fa fa-ban" aria-hidden="true"></i> {moment(blockDetails?.blocked_until).format('YYYY-MM-DD HH:mm')}</span> : ''}
+              {blockDetails?.blocked_until ? <span onClick={() => window.open(`${window.location.origin}/app/mobile-number/${blockDetails.name}`, '_blank')} className="banDate"><i className="fa fa-ban" aria-hidden="true"></i> {moment(blockDetails?.blocked_until).format('YYYY-MM-DD HH:mm')}</span> : ''}
               <select name="user" id="user" onChange={(obj) => setUser(obj.target.value)}>
                 <option value={null}>Select User</option>
                 {users.map((user, key) => <option key={key} value={user.name}>{user.username}</option>)}
@@ -767,11 +769,12 @@ function Chats() {
                     {(status == 'idle' || status == 'stopped') && (<i className="fa fa-microphone" onClick={startRecording}></i>)}
                     {!(status == 'idle' || status == 'stopped') && (<i className="fa fa-play-circle" style={{ color: 'green' }} onClick={stopRecording}></i>)}
                     {!(status == 'idle' || status == 'stopped') && (<div className="autocomplete-audio">
-                      {/* {status} */}
                       <div className="audioBox">
-                        <i className="fa fa-trash" onClick={stopRecording} aria-hidden="true"></i>
-                        <div>{'2:30'}</div>
-                        {/* <video src={mediaBlobUrl} controls autoPlay loop /> */}
+                        <i className="fa fa-trash" onClick={()=>{
+                          stopRecording()
+                          clearBlobUrl()
+                        }} aria-hidden="true"></i>
+                        {status != 'paused' && (<div><img className="audio-image" src={`${Config.apiURL}/files/audio.gif`} alt="" /></div>)}
                         {status != 'paused' && (<i className="fa fa-pause" style={{ color: '#ff0000' }} onClick={pauseRecording} aria-hidden="true"></i>)}
                         {status == 'paused' && (<i className="fa fa-microphone" style={{ color: '#ff0000' }} onClick={resumeRecording} aria-hidden="true"></i>)}
                       </div>
