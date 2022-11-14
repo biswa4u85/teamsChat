@@ -50,6 +50,7 @@ function Chats() {
   const [newMessage, setNewMessage] = useState('')
   const [live, setLive] = useState(false)
   const [checkSubmit, setCheckSubmit] = useState(true)
+  const [recording, setRecording] = useState(false)
   const { startRecording, stopRecording, pauseRecording, resumeRecording, status, mediaBlobUrl, clearBlobUrl } = useReactMediaRecorder(
     {
       audio: true,
@@ -71,12 +72,14 @@ function Chats() {
           let data1 = await apiPostCall('/', params, window?.frappe?.csrf_token)
           if (data1) {
             setNewMessage('')
+            clearBlobUrl()
           }
         }
       }
     }
-    if (mediaBlobUrl) {
+    if (mediaBlobUrl && recording) {
       uploadVoice();
+      setRecording(false)
     }
 
   }, [mediaBlobUrl]);
@@ -575,6 +578,7 @@ function Chats() {
     a.play();
   }
 
+
   return (
     <div className="containers">
 
@@ -750,7 +754,6 @@ function Chats() {
               })}
               <div ref={chatMenuRef} />
             </div>
-
             <div className="row">
               <form onSubmit={handleSubmit} style={{ width: '100%' }}>
                 <div className="col-12">
@@ -766,13 +769,20 @@ function Chats() {
                     {selTemplate.length > 0 && (<div className="autocomplete-items">
                       {selTemplate.map((item, key) => <div key={key} onClick={() => addTemplate(item)}>{item.name}</div>)}
                     </div>)}
-                    {(status == 'idle' || status == 'stopped') && (<i className="fa fa-microphone" onClick={startRecording}></i>)}
-                    {!(status == 'idle' || status == 'stopped') && (<i className="fa fa-play-circle" style={{ color: 'green' }} onClick={stopRecording}></i>)}
+
+                    {(status == 'idle' || status == 'stopped') && (<i className="fa fa-microphone" onClick={() => {
+                      setRecording(true)
+                      clearBlobUrl()
+                      startRecording()
+                    }}></i>)}
+                    {!(status == 'idle' || status == 'stopped') && (<i className="fa fa-play-circle" style={{ color: 'green' }} onClick={() => {
+                      stopRecording()
+                    }}></i>)}
                     {!(status == 'idle' || status == 'stopped') && (<div className="autocomplete-audio">
                       <div className="audioBox">
-                        <i className="fa fa-trash" onClick={()=>{
-                          stopRecording()
+                        <i className="fa fa-trash" onClick={() => {
                           clearBlobUrl()
+                          setRecording(false)
                         }} aria-hidden="true"></i>
                         {status != 'paused' && (<div><img className="audio-image" src={`${Config.apiURL}/files/audio.gif`} alt="" /></div>)}
                         {status != 'paused' && (<i className="fa fa-pause" style={{ color: '#ff0000' }} onClick={pauseRecording} aria-hidden="true"></i>)}
