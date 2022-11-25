@@ -215,7 +215,7 @@ function Chats() {
     // Sort Array First
     data = data.sort(function (a, b) {
       // return new Date(b.last_seen) - new Date(a.last_seen);
-      return b.last_seen - a.last_seen;
+      return Number(b.last_seen) - Number(a.last_seen);
     });
 
     // Group By Brand
@@ -236,7 +236,7 @@ function Chats() {
       let sortable = Object.values(currentChats)
       sortable = sortable.sort(function (a, b) {
         // return new Date(b.last_seen) - new Date(a.last_seen);
-        return b.last_seen - a.last_seen;
+        return Number(b.last_seen) - Number(a.last_seen);
       });
       setCurrentChats(JSON.parse(JSON.stringify(sortable)))
       addtimerDate()
@@ -290,15 +290,19 @@ function Chats() {
     let sortable = Object.values(currentChats)
     sortable = sortable.sort(function (a, b) {
       // return new Date(b.last_seen) - new Date(a.last_seen);
-      return b.last_seen - a.last_seen;
+      return Number(b.last_seen) - Number(a.last_seen);
     });
-    setCurrentChats(JSON.parse(JSON.stringify(sortable)))
-    setSelTemplate([])
-    getTemplate(data)
-    messagesLive.current = []
-    setMessages([])
-    filterChats()
-    addtimerDate()
+    setCurrentChats([])
+    setTimeout(() => {
+      setCurrentChats(JSON.parse(JSON.stringify(sortable)))
+      setSelTemplate([])
+      getTemplate(data)
+      messagesLive.current = []
+      setMessages([])
+      filterChats()
+      addtimerDate()
+    }, 5)
+
   }
 
   const getTemplate = async (name) => {
